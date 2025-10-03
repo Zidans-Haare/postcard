@@ -126,19 +126,52 @@ export default function DashboardPage() {
   const currentRangeStart = (page - 1) * PAGE_LIMIT + 1;
   const currentRangeEnd = Math.min(page * PAGE_LIMIT, total);
 
+  const statusSummary = useMemo(
+    () =>
+      items.reduce(
+        (acc, item) => {
+          acc[item.status] += 1;
+          return acc;
+        },
+        { received: 0, approved: 0, deleted: 0 }
+      ),
+    [items]
+  );
+
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "");
 
   return (
     <main className={styles.container}>
       <header className={styles.header}>
-        <div>
-          <h1>Dashboard</h1>
-          <p>Überblick über alle eingegangenen digitalen Postkarten.</p>
+        <div className={styles.headerTop}>
+          <div>
+            <span className={styles.brandBadge}>StuRa HTW Dresden</span>
+            <h1>Admin-Dashboard</h1>
+            <p>Übersicht über alle eingereichten digitalen Postkarten und deren Bearbeitungsstatus.</p>
+          </div>
+          <div className={styles.toolbar}>
+            <button className={styles.logoutButton} onClick={handleLogout}>
+              Abmelden
+            </button>
+          </div>
         </div>
-        <div className={styles.toolbar}>
-          <button className={styles.logoutButton} onClick={handleLogout}>
-            Abmelden
-          </button>
+        <div className={styles.metricsRow}>
+          <div className={styles.metricCard}>
+            <span className={styles.metricValue}>{total}</span>
+            <span className={styles.metricLabel}>Gesamt eingegangen</span>
+          </div>
+          <div className={styles.metricCard}>
+            <span className={styles.metricValue}>{statusSummary.received}</span>
+            <span className={styles.metricLabel}>Auf dieser Seite: Eingegangen</span>
+          </div>
+          <div className={styles.metricCard}>
+            <span className={styles.metricValue}>{statusSummary.approved}</span>
+            <span className={styles.metricLabel}>Auf dieser Seite: Freigegeben</span>
+          </div>
+          <div className={styles.metricCard}>
+            <span className={styles.metricValue}>{statusSummary.deleted}</span>
+            <span className={styles.metricLabel}>Auf dieser Seite: Soft Delete</span>
+          </div>
         </div>
       </header>
 

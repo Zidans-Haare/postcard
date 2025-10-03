@@ -117,11 +117,12 @@ export default function EntryDetailPage() {
         </div>
       )}
 
-      {loading && <p style={{ color: "#e2e8f0" }}>Lade Eintrag…</p>}
+      {loading && <p style={{ color: "#475569" }}>Lade Eintrag…</p>}
 
       {entry && (
         <>
           <header className={styles.header}>
+            <span className={styles.brandBadge}>StuRa HTW Dresden</span>
             <h1>Eintrag {entry.ref}</h1>
             <span className={statusClass}>{statusLabel}</span>
             <p>Empfangen am {new Date(entry.receivedAt).toLocaleString("de-DE")}</p>

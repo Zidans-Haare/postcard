@@ -33,7 +33,8 @@ export default function Page() {
   const [emailTouched, setEmailTouched] = useState(false);
   const [faculty, setFaculty] = useState<string | "">("");
   const [location, setLocation] = useState("");
-  const [term, setTerm] = useState("");
+  const [termStart, setTermStart] = useState("");
+  const [termEnd, setTermEnd] = useState("");
   const [message, setMessage] = useState("");
   const [agree, setAgree] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
@@ -44,6 +45,21 @@ export default function Page() {
   const [status, setStatus] = useState<{ type: "idle" | "error" | "success"; message: string; ref?: string }>(
     { type: "idle", message: "" }
   );
+  const [statusRef, setStatusRef] = useState("\");
+  const [statusLookup, setStatusLookup] = useState<
+    | { state: "idle" }
+    | { state: "loading" }
+    | { state: "error"; message: string }
+    | {
+        state: "success";
+        payload: {
+          status: "approved" | "received" | "deleted";
+          receivedAt: string;
+          approvedAt: string | null;
+          deletedAt: string | null;
+        };
+      }
+  >({ state: "idle" });
   const statusRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -65,7 +81,41 @@ export default function Page() {
   const trimmedLocation = location.trim();
   const trimmedMessage = message.trim();
   const trimmedName = fullName.trim();
-  const trimmedTerm = term.trim();
+
+  const formatDate = (value: string) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleDateString("de-DE", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
+  const termDisplay = useMemo(() => {
+    const start = formatDate(termStart);
+    const end = formatDate(termEnd);
+    if (start && end) {
+      return `${start} – ${end}`;
+    }
+    if (start) return start;
+    if (end) return end;
+    return "";
+  }, [termStart, termEnd]);
+
+  const statusLabelMap: Record<"approved" | "received" | "deleted", string> = {
+    approved: "Freigegeben",
+    received: "Eingegangen",
+    deleted: "Soft Delete",
+  };
+
+  const formatDateTime = (iso?: string | null) => {
+    if (!iso) return null;
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleString("de-DE");
+  };
 
   const totalBytes = useMemo(() => {
     const imagesBytes = images.reduce((sum, item) => sum + item.file.size, 0);
@@ -130,7 +180,7 @@ export default function Page() {
     fullName: fullName.trim() || "",
     faculty: faculty || undefined,
     location: location.trim() || undefined,
-    term: term.trim() || undefined,
+    term: termDisplay || undefined,
     message: message.trim() || undefined,
   });
 
@@ -204,8 +254,8 @@ export default function Page() {
       if (location.trim()) {
         formData.append("location", location.trim());
       }
-      if (term.trim()) {
-        formData.append("term", term.trim());
+      if (termDisplay) {
+        formData.append("term", termDisplay);
       }
       if (message.trim()) {
         formData.append("message", message.trim());
@@ -242,6 +292,53 @@ export default function Page() {
     }
   };
 
+  const handleStatusLookup = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!backendUrl) {
+      setStatusLookup({ state: "error", message: "Backend-URL ist nicht konfiguriert." });
+      return;
+    }
+
+    const trimmedRef = statusRef.trim().toUpperCase();
+    if (!trimmedRef) {
+      setStatusLookup({ state: "error", message: "Bitte eine Referenz-ID eingeben." });
+      return;
+    }
+
+    setStatusLookup({ state: "loading" });
+
+    try {
+      const response = await fetch(
+        `${backendUrl.replace(/\/$/, "")}/api/status/${encodeURIComponent(trimmedRef)}`
+      );
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        const message = payload?.message || "Referenz wurde nicht gefunden.";
+        setStatusLookup({ state: "error", message });
+        return;
+      }
+      const payload = (await response.json()) as {
+        ok: boolean;
+        status: "approved" | "received" | "deleted";
+        receivedAt: string;
+        approvedAt: string | null;
+        deletedAt: string | null;
+      };
+      setStatusLookup({
+        state: "success",
+        payload: {
+          status: payload.status,
+          receivedAt: payload.receivedAt,
+          approvedAt: payload.approvedAt,
+          deletedAt: payload.deletedAt,
+        },
+      });
+    } catch (error) {
+      console.error(error);
+      setStatusLookup({ state: "error", message: "Status konnte nicht abgerufen werden." });
+    }
+  };
+
   const statusClass = useMemo(() => {
     if (status.type === "error") return `${styles.status} ${styles.statusError}`;
     if (status.type === "success") return `${styles.status} ${styles.statusSuccess}`;
@@ -249,120 +346,166 @@ export default function Page() {
   }, [status.type]);
 
   return (
-    <main className={styles.container}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>Digitale Postkarte – Erstellen &amp; Einreichen</h1>
-        <p className={styles.lead}>
-          Fülle das Formular aus, erstelle deine Postkarte als PDF und reiche sie zusammen mit optionalen Bildern ein.
-          Alle Felder, Hinweise und Schaltflächen sind auf Deutsch und barrierearm gestaltet.
+    <main className={styles.shell}>
+      <div className={styles.brandBar}>
+        <div className={styles.brandMark}>
+          <span className={styles.brandMarkAccent}>Stu</span>Ra HTW Dresden
+        </div>
+        <span className={styles.brandTagline}>Programm Internationales · Digitale Postkarte</span>
+      </div>
+
+      <header className={styles.hero}>
+        <span className={styles.heroBadge}>StuRa HTW Dresden</span>
+        <h1 className={styles.heroTitle}>Digitale Postkarte – Erstellen &amp; Einreichen</h1>
+        <p className={styles.heroLead}>
+          Outgoing-Studierende gestalten eine digitale Postkarte, erzeugen das fertige PDF im A4-Querformat
+          und reichen die Datei gemeinsam mit optionalen Bildern beim StuRa der HTW Dresden ein.
         </p>
+        <ul className={styles.heroFacts}>
+          <li>Clientseitige PDF-Erzeugung</li>
+          <li>Upload inkl. bis zu 5 Zusatzbildern</li>
+          <li>Direkter Abgleich mit den Admin-Tools</li>
+        </ul>
+        <div className={styles.heroCtaRow}>
+          <button className={styles.heroCtaButton} onClick={() => document.getElementById("postkarte-form")?.scrollIntoView({ behavior: "smooth" })}>
+            Formular öffnen
+          </button>
+          <span className={styles.heroCtaNote}>Benötigte Zeit: ca. 5 Minuten</span>
+        </div>
       </header>
 
       <div className={styles.contentGrid}>
-        <section className={styles.formCard}>
-          <form onSubmit={handleSubmit} noValidate>
-            <div className={styles.formSection}>
-              <h2 className={styles.sectionTitle}>Persönliche Angaben</h2>
-              <label className={styles.label} htmlFor="fullName">
-                Voller Name*
-              </label>
-              <input
-                id="fullName"
-                name="fullName"
-                className={styles.input}
-                required
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-                autoComplete="name"
-              />
+        <section className={`${styles.panel} ${styles.formPanel}`}>
+          <form id="postkarte-form" onSubmit={handleSubmit} noValidate>
+            <div className={styles.fieldGroup}>
+              <div>
+                <h2 className={styles.sectionTitle}>Persönliche Angaben</h2>
+                <label className={styles.label} htmlFor="fullName">
+                  Voller Name*
+                </label>
+                <input
+                  id="fullName"
+                  name="fullName"
+                  className={styles.input}
+                  required
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
+                  autoComplete="name"
+                />
+              </div>
 
-              <label className={styles.label} htmlFor="email">
-                E-Mail*
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                className={styles.input}
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                onBlur={() => setEmailTouched(true)}
-                autoComplete="email"
-                aria-invalid={emailTouched && !emailValid}
-              />
-              {emailTouched && !emailValid && (
-                <p className={styles.hint} style={{ color: "#b91c1c" }}>
-                  Bitte eine gültige E-Mail-Adresse angeben.
-                </p>
-              )}
+              <div>
+                <label className={styles.label} htmlFor="email">
+                  E-Mail*
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  className={styles.input}
+                  required
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  onBlur={() => setEmailTouched(true)}
+                  autoComplete="email"
+                  aria-invalid={emailTouched && !emailValid}
+                />
+                {emailTouched && !emailValid && (
+                  <p className={styles.counter} style={{ textAlign: "left", color: "#b91c1c" }}>
+                    Bitte eine gültige E-Mail-Adresse angeben.
+                  </p>
+                )}
+              </div>
 
-              <label className={styles.label} htmlFor="faculty">
-                Fakultät
-              </label>
-              <select
-                id="faculty"
-                name="faculty"
-                className={styles.select}
-                value={faculty}
-                onChange={(event) => setFaculty(event.target.value)}
-              >
-                <option value="">Bitte auswählen</option>
-                {FACULTIES.map((fac) => (
-                  <option key={fac} value={fac}>
-                    {fac}
-                  </option>
-                ))}
-              </select>
+              <div>
+                <label className={styles.label} htmlFor="faculty">
+                  Fakultät
+                </label>
+                <select
+                  id="faculty"
+                  name="faculty"
+                  className={styles.select}
+                  value={faculty}
+                  onChange={(event) => setFaculty(event.target.value)}
+                >
+                  <option value="">Bitte auswählen</option>
+                  {FACULTIES.map((fac) => (
+                    <option key={fac} value={fac}>
+                      {fac}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-              <label className={styles.label} htmlFor="location">
-                Ort/Uni
-              </label>
-              <input
-                id="location"
-                name="location"
-                className={styles.input}
-                value={location}
-                onChange={(event) => setLocation(event.target.value)}
-              />
+              <div>
+                <label className={styles.label} htmlFor="location">
+                  Ort/Uni
+                </label>
+                <input
+                  id="location"
+                  name="location"
+                  className={styles.input}
+                  value={location}
+                  onChange={(event) => setLocation(event.target.value)}
+                />
+              </div>
 
-              <label className={styles.label} htmlFor="term">
-                Zeitraum
-              </label>
-              <input
-                id="term"
-                name="term"
-                className={styles.input}
-                value={term}
-                onChange={(event) => setTerm(event.target.value)}
-              />
-            </div>
-
-            <div className={styles.formSection}>
-              <h2 className={styles.sectionTitle}>Kurztext</h2>
-              <label className={styles.label} htmlFor="message">
-                Kurztext (max. 140 Zeichen)
-              </label>
-              <textarea
-                id="message"
-                name="message"
-                className={styles.textarea}
-                maxLength={MAX_MESSAGE_LENGTH}
-                value={message}
-                onChange={(event) => handleMessageChange(event.target.value)}
-                aria-describedby="message-counter"
-              />
-              <div id="message-counter" className={styles.counter} aria-live="polite">
-                {charCount}/{MAX_MESSAGE_LENGTH}
+              <div>
+                <label className={styles.label} htmlFor="term-start">
+                  Zeitraum
+                </label>
+                <div className={styles.dateInputs}>
+                  <input
+                    id="term-start"
+                    name="termStart"
+                    type="date"
+                    className={styles.input}
+                    value={termStart}
+                    onChange={(event) => setTermStart(event.target.value)}
+                    aria-label="Zeitraum von"
+                  />
+                  <input
+                    id="term-end"
+                    name="termEnd"
+                    type="date"
+                    className={styles.input}
+                    value={termEnd}
+                    onChange={(event) => setTermEnd(event.target.value)}
+                    aria-label="Zeitraum bis"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className={styles.formSection}>
-              <h2 className={styles.sectionTitle}>Uploads</h2>
-              <p className={styles.hint}>
-                Lade optional bis zu 5 Bilder (je bis 8&nbsp;MB) hoch. Die Postkarte im PDF-Format
-                (max. 10&nbsp;MB) ist Pflicht.
-              </p>
+            <div className={styles.fieldGroup}>
+              <div>
+                <h2 className={styles.sectionTitle}>Kurztext</h2>
+                <label className={styles.label} htmlFor="message">
+                  Kurztext (max. 140 Zeichen)
+                </label>
+                <textarea
+                  id="message"
+                  name="message"
+                  className={styles.textarea}
+                  maxLength={MAX_MESSAGE_LENGTH}
+                  value={message}
+                  onChange={(event) => handleMessageChange(event.target.value)}
+                  aria-describedby="message-counter"
+                />
+                <div id="message-counter" className={styles.counter} aria-live="polite">
+                  {charCount}/{MAX_MESSAGE_LENGTH}
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.fieldGroup}>
+              <div>
+                <h2 className={styles.sectionTitle}>Uploads</h2>
+                <p className={styles.heroLead} style={{ color: "#475569", fontSize: "0.98rem" }}>
+                  Die erzeugte Postkarte (PDF, max. 10&nbsp;MB) ist Pflicht. Optional kannst du bis zu fünf zusätzliche
+                  Bilder (je max. 8&nbsp;MB) hinzufügen.
+                </p>
+              </div>
 
               <div className={styles.buttonRow}>
                 <button
@@ -420,20 +563,23 @@ export default function Page() {
               </ul>
             </div>
 
-            <div className={styles.formSection}>
-              <h2 className={styles.sectionTitle}>Einwilligung</h2>
-              <div className={styles.checkboxRow}>
-                <input
-                  id="agree"
-                  name="agree"
-                  type="checkbox"
-                  required
-                  checked={agree}
-                  onChange={(event) => setAgree(event.target.checked)}
-                />
-                <label htmlFor="agree">
-                  Ich bin einverstanden, dass meine Postkarte und Bilder für HTW-Kommunikation (Web, Social Media, Print) verwendet werden. Ich habe die Datenschutzhinweise gelesen.
-                </label>
+            <div className={styles.fieldGroup}>
+              <div>
+                <h2 className={styles.sectionTitle}>Einwilligung</h2>
+                <div className={styles.checkboxRow}>
+                  <input
+                    id="agree"
+                    name="agree"
+                    type="checkbox"
+                    required
+                    checked={agree}
+                    onChange={(event) => setAgree(event.target.checked)}
+                  />
+                  <label htmlFor="agree">
+                    Ich bin einverstanden, dass meine Postkarte und Bilder für HTW-Kommunikation (Web, Social Media,
+                    Print) verwendet werden. Ich habe die Datenschutzhinweise gelesen.
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -464,25 +610,27 @@ export default function Page() {
           </form>
         </section>
 
-        <aside className={styles.previewCard} aria-live="polite">
+        <aside className={`${styles.panel} ${styles.previewPanel}`} aria-live="polite">
           <div className={styles.previewSurface}>
             <div className={styles.livePostcard}>
               <div className={styles.postcardLeft}>
-                <div className={styles.postcardLogo}>
-                  <span>STURA</span>
-                  <span>HTWD</span>
-                </div>
-                <div className={styles.postcardHeading}>Liebe Kommiliton:innen</div>
-                <div className={styles.postcardGreeting}>
-                  Liebe Grüße aus {trimmedLocation || "…"}
-                </div>
-                <div className={styles.postcardMessage}>
-                  {trimmedMessage || "Hier steht dein Kurztext."}
-                </div>
-                <div className={styles.postcardSignature}>
-                  <strong>{trimmedName || "Deine Unterschrift"}</strong>
-                  {trimmedTerm && <span>{trimmedTerm}</span>}
-                  {faculty && <span>{faculty}</span>}
+                <div className={styles.postcardLeftContent}>
+                  <div className={styles.postcardLogo}>
+                    <span>StuRa</span>
+                    <span>HTWD</span>
+                  </div>
+                  <div className={styles.postcardHeading}>Liebe Kommiliton:innen</div>
+                  <div className={styles.postcardGreeting}>
+                    Liebe Grüße aus {trimmedLocation || "…"}
+                  </div>
+                  <div className={styles.postcardMessage}>
+                    {trimmedMessage || "Hier steht dein Kurztext."}
+                  </div>
+                  <div className={styles.postcardSignature}>
+                    <strong>{trimmedName || "Deine Unterschrift"}</strong>
+                    {termDisplay && <span>{termDisplay}</span>}
+                    {faculty && <span>{faculty}</span>}
+                  </div>
                 </div>
               </div>
               <div className={styles.postcardRight}>
@@ -531,6 +679,81 @@ export default function Page() {
           </div>
         </aside>
       </div>
+
+      <section className={styles.supportStrip}>
+        <strong>Kontakt StuRa HTW Dresden</strong>
+        <span>Stabstelle Internationales · Friedrich-List Platz 1 · 01069 Dresden</span>
+        <span>Fragen? Schreib uns an internationale@stura.htw-dresden.de</span>
+      </section>
+
+      <section className={`${styles.panel} ${styles.statusPanel}`}>
+        <div>
+          <h2 className={styles.sectionTitle}>Status mit Referenz-ID prüfen</h2>
+          <p className={styles.statusDescription}>
+            Nach dem Einreichen erhältst du eine Referenz-ID. Trage sie hier ein, um den aktuellen Bearbeitungsstand
+            deiner Postkarte nachzuverfolgen.
+          </p>
+        </div>
+        <form className={styles.statusForm} onSubmit={handleStatusLookup}>
+          <div className={styles.statusInputRow}>
+            <input
+              className={styles.statusInput}
+              value={statusRef}
+              onChange={(event) => setStatusRef(event.target.value)}
+              placeholder="Referenz-ID (z. B. AB12CD34)"
+              aria-label="Referenz-ID"
+            />
+            <button className={styles.statusButton} type="submit">
+              Status abrufen
+            </button>
+          </div>
+          <div className={styles.statusResult} aria-live="polite">
+            {statusLookup.state === "idle" && (
+              <span>Gib deine Referenz-ID ein und bestätige.</span>
+            )}
+            {statusLookup.state === "loading" && <span>Status wird geladen…</span>}
+            {statusLookup.state === "error" && <span className={styles.statusResultError}>{statusLookup.message}</span>}
+            {statusLookup.state === "success" && (
+              <ul>
+                <li>
+                  <strong>Status:</strong> {statusLabelMap[statusLookup.payload.status]}
+                </li>
+                <li>
+                  <strong>Eingegangen:</strong> {formatDateTime(statusLookup.payload.receivedAt)}
+                </li>
+                {statusLookup.payload.approvedAt && (
+                  <li>
+                    <strong>Freigegeben:</strong> {formatDateTime(statusLookup.payload.approvedAt)}
+                  </li>
+                )}
+                {statusLookup.payload.deletedAt && (
+                  <li>
+                    <strong>Soft Delete:</strong> {formatDateTime(statusLookup.payload.deletedAt)}
+                  </li>
+                )}
+              </ul>
+            )}
+          </div>
+        </form>
+      </section>
+
+      <section className={styles.infoGrid}>
+        <article className={styles.infoCard}>
+          <div className={styles.infoNumber}>1</div>
+          <h3>Postkarte gestalten</h3>
+          <p>Fülle die Felder aus und nutze die Live-Vorschau, um Layout und Text abzustimmen.</p>
+        </article>
+        <article className={styles.infoCard}>
+          <div className={styles.infoNumber}>2</div>
+          <h3>PDF erzeugen</h3>
+          <p>Klicke auf „Postkarte erzeugen (PDF)“ – das PDF entspricht dem HTW-Layout.</p>
+        </article>
+        <article className={styles.infoCard}>
+          <div className={styles.infoNumber}>3</div>
+          <h3>Einreichen &amp; verfolgen</h3>
+          <p>Nach dem Upload erhältst du eine Referenz-ID. Die StuRa-Admins sehen den Eintrag sofort.</p>
+        </article>
+      </section>
     </main>
   );
 }

@@ -8,6 +8,7 @@ import { config } from "./config";
 import authRouter from "./routes/auth";
 import uploadRouter from "./routes/upload";
 import adminRouter from "./routes/admin";
+import statusRouter from "./routes/status";
 import { errorHandler } from "./middleware/errorHandler";
 
 async function ensureUploadDir() {
@@ -64,6 +65,7 @@ export async function createServer() {
 
   app.use("/api/auth", authRouter);
   app.use("/api/upload", uploadRouter);
+  app.use("/api/status", statusRouter);
   app.use("/api/admin", adminRouter);
 
   app.use(errorHandler);

@@ -37,10 +37,13 @@ export default function LoginPage() {
   return (
     <main className={styles.wrapper}>
       <section className={styles.card}>
-        <h1 className={styles.title}>Digitale Postkarte – Admin</h1>
-        <p className={styles.subtitle}>
-          Bitte melde dich mit deinem Admin-Zugang an. Nach 10 Fehlversuchen wird der Login für 15 Minuten gesperrt.
-        </p>
+        <header>
+          <div className={styles.brandBadge}>StuRa HTW Dresden</div>
+          <h1 className={styles.title}>Digitale Postkarte – Admin</h1>
+          <p className={styles.subtitle}>
+            Bitte melde dich mit deinem Admin-Zugang an. Nach 10 Fehlversuchen wird der Login für 15 Minuten gesperrt.
+          </p>
+        </header>
 
         <form onSubmit={handleSubmit}>
           <label className={styles.label} htmlFor="username">

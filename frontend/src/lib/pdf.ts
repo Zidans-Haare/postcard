@@ -12,6 +12,8 @@ export interface PostcardFormData {
 const A4_LANDSCAPE: [number, number] = [842, 595];
 const RIGHT_COLUMN_WIDTH = 250;
 const ORANGE = rgb(0.894, 0.392, 0.012);
+const LEFT_SAFE_MARGIN = 70;
+const RIGHT_SAFE_MARGIN = 40;
 
 function wrapText(
   text: string,
@@ -118,59 +120,68 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
   }
 
   // Linker Textbereich
-  const leftMargin = 70;
+  const leftMargin = LEFT_SAFE_MARGIN;
+  const rightMargin = RIGHT_SAFE_MARGIN;
+  const contentWidth = width - RIGHT_COLUMN_WIDTH - leftMargin - rightMargin;
   let cursorY = height - 120;
 
-  // Logo-Platzhalter
-  page.drawText("STURA", {
-    x: leftMargin,
-    y: cursorY,
-    size: 24,
+  const drawCenteredText = (
+    text: string,
+    y: number,
+    options: { font: PDFFont; size: number; color: ReturnType<typeof rgb> }
+  ) => {
+    const { font, size, color } = options;
+    const textWidth = font.widthOfTextAtSize(text, size);
+    const startX = leftMargin + (contentWidth - textWidth) / 2;
+    page.drawText(text, {
+      x: startX,
+      y,
+      size,
+      font,
+      color,
+    });
+  };
+
+  // Logo-Platzhalter (anged. Textlogo)
+  drawCenteredText("StuRa", cursorY, {
     font: sansFont,
+    size: 22,
     color: rgb(0.153, 0.302, 0.408),
   });
-  page.drawText("HTWD", {
-    x: leftMargin,
-    y: cursorY - 24,
-    size: 24,
+  drawCenteredText("HTWD", cursorY - 24, {
     font: sansFont,
+    size: 22,
     color: ORANGE,
   });
 
   cursorY -= 70;
 
-  page.drawText("Liebe Kommiliton:innen", {
-    x: leftMargin,
-    y: cursorY,
-    size: 22,
+  drawCenteredText("Liebe Kommiliton:innen", cursorY, {
     font: serifBoldFont,
+    size: 22,
     color: rgb(0.1, 0.1, 0.1),
   });
-  cursorY -= 40;
+  cursorY -= 42;
 
   const locationLine = data.location?.trim()
     ? `Liebe Grüße aus ${data.location.trim()}`
     : "Liebe Grüße aus meinem Auslandsaufenthalt";
 
-  page.drawText(locationLine, {
-    x: leftMargin,
-    y: cursorY,
-    size: 18,
+  drawCenteredText(locationLine, cursorY, {
     font: serifBoldFont,
+    size: 18,
     color: rgb(0.1, 0.1, 0.1),
   });
-  cursorY -= 32;
+  cursorY -= 36;
 
   const message = data.message?.trim() || "Hier steht dein Kurztext.";
-  const paragraphWidth = width - RIGHT_COLUMN_WIDTH - leftMargin - 40;
+  const paragraphWidth = contentWidth;
   const messageLines = wrapText(message, paragraphWidth, serifFont, 16);
 
   for (const line of messageLines) {
-    page.drawText(line, {
-      x: leftMargin,
-      y: cursorY,
-      size: 16,
+    drawCenteredText(line, cursorY, {
       font: serifFont,
+      size: 16,
       color: rgb(0.2, 0.2, 0.2),
     });
     cursorY -= 22;
@@ -178,22 +189,27 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
 
   // Datum/Signatur
   const footerY = 80;
-  page.drawText(data.fullName || "HTW-Outgoing", {
-    x: leftMargin,
-    y: footerY + 20,
-    size: 14,
+  drawCenteredText(data.fullName || "HTW-Outgoing", footerY + 20, {
     font: serifBoldFont,
+    size: 14,
     color: rgb(0.1, 0.1, 0.1),
   });
 
   const now = new Date();
   const metaLine = `Erstellt am ${now.toLocaleDateString("de-DE")}`;
-  page.drawText(metaLine, {
-    x: leftMargin,
-    y: footerY,
-    size: 12,
+  drawCenteredText(metaLine, footerY, {
     font: serifFont,
+    size: 12,
     color: rgb(0.45, 0.45, 0.45),
+  });
+
+  // dezente Bodenfläche
+  page.drawRectangle({
+    x: leftMargin,
+    y: footerY - 52,
+    width: contentWidth,
+    height: 14,
+    color: rgb(0.82, 0.91, 0.86),
   });
 
   const bytes = await doc.save();

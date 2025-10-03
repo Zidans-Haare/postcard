@@ -2,6 +2,7 @@
   padding: 2.5rem;
   display: grid;
   gap: 2rem;
+  color: #0f172a;
 }
 
 @media (max-width: 960px) {
@@ -11,37 +12,63 @@
 }
 
 .backLink {
-  color: #bbe7ff;
+  color: #0e7490;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
+  font-weight: 600;
 }
 
 .header {
-  color: #e2e8f0;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.6rem;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: clamp(1.9rem, 1.4rem + 1vw, 2.4rem);
+}
+
+.header p {
+  margin: 0;
+  color: #475569;
+}
+
+.brandBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(14, 116, 144, 0.12);
+  color: #0e7490;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  width: fit-content;
 }
 
 .grid {
   display: grid;
-  gap: 1.5rem;
+  gap: 1.6rem;
 }
 
 @media (min-width: 1200px) {
   .grid {
-    grid-template-columns: 1.1fr 0.9fr;
+    grid-template-columns: 1.05fr 0.95fr;
   }
 }
 
 .card {
-  background: rgba(15, 23, 42, 0.75);
-  border-radius: 18px;
+  background: #ffffff;
+  border-radius: 22px;
   border: 1px solid rgba(148, 163, 184, 0.25);
-  padding: 1.75rem;
-  color: #f1f5f9;
+  padding: clamp(1.8rem, 1.5rem + 1vw, 2.4rem);
+  box-shadow: 0 20px 50px -35px rgba(15, 23, 42, 0.25);
+  color: #0f172a;
 }
 
 .card h2 {
@@ -52,67 +79,69 @@
 .metaList {
   list-style: none;
   padding: 0;
-  margin: 1rem 0 0;
+  margin: 1.2rem 0 0;
   display: grid;
-  gap: 0.65rem;
-  color: #cbd5f5;
+  gap: 0.7rem;
+  color: #475569;
 }
 
 .metaList li strong {
   display: inline-block;
-  min-width: 140px;
-  color: #f8fafc;
+  min-width: 150px;
+  color: #0f172a;
 }
 
 .statusBadge {
   display: inline-flex;
-  padding: 0.3rem 0.75rem;
+  padding: 0.35rem 0.8rem;
   border-radius: 999px;
-  background: rgba(56, 189, 248, 0.15);
-  color: #bae6fd;
+  background: rgba(14, 116, 144, 0.12);
+  color: #0e7490;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .statusApproved {
-  background: rgba(34, 197, 94, 0.2);
-  color: #86efac;
+  background: rgba(34, 197, 94, 0.12);
+  color: #047857;
 }
 
 .statusDeleted {
-  background: rgba(248, 113, 113, 0.2);
-  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
 }
 
 .actionRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 1rem;
+  gap: 0.85rem;
+  margin-top: 1.2rem;
 }
 
 .actionButton {
-  border-radius: 10px;
-  border: 1px solid rgba(96, 165, 250, 0.55);
-  background: rgba(37, 99, 235, 0.15);
-  color: #bfdbfe;
-  padding: 0.6rem 1.1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(14, 116, 144, 0.35);
+  background: rgba(14, 116, 144, 0.12);
+  color: #0e7490;
+  padding: 0.65rem 1.2rem;
   cursor: pointer;
+  font-weight: 600;
 }
 
 .actionButtonWarning {
-  border-color: rgba(248, 113, 113, 0.55);
-  background: rgba(248, 113, 113, 0.15);
-  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
 }
 
 .pdfFrame {
   width: 100%;
   min-height: 420px;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  background: rgba(15, 23, 42, 0.4);
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: #f5f7fb;
 }
 
 .imagesGrid {
@@ -123,22 +152,22 @@
 
 .thumbnail {
   width: 100%;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
   object-fit: cover;
-  background: rgba(15, 23, 42, 0.4);
+  background: #f5f7fb;
 }
 
 .statusBox {
-  padding: 0.75rem 1rem;
-  border-radius: 12px;
-  background: rgba(56, 189, 248, 0.1);
-  color: #bae6fd;
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: rgba(14, 116, 144, 0.12);
+  color: #0e7490;
+  border: 1px solid rgba(14, 116, 144, 0.3);
 }
 
 .statusError {
-  background: rgba(248, 113, 113, 0.1);
-  color: #fca5a5;
+  background: rgba(248, 113, 113, 0.18);
+  color: #b91c1c;
   border-color: rgba(248, 113, 113, 0.35);
 }
