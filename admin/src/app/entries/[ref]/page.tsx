@@ -36,6 +36,10 @@ export default function EntryDetailPage() {
   const [statusBox, setStatusBox] = useState<{ type: "info" | "error"; message: string } | null>(
     null
   );
+  const [mediaPreview, setMediaPreview] = useState<{
+    pdf?: string;
+    images: Record<string, string>;
+  }>({ images: {} });
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "");
 
@@ -63,6 +67,63 @@ export default function EntryDetailPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ref]);
+
+  useEffect(() => {
+    if (!entry || !backendUrl) {
+      setMediaPreview({ images: {} });
+      return;
+    }
+
+    let cancelled = false;
+    const objectUrls: string[] = [];
+
+    const buildUrl = (fileName: string) =>
+      `${backendUrl}/api/admin/entries/${entry.ref}/files/${encodeURIComponent(fileName)}`;
+
+    const fetchBlobUrl = async (fileName: string) => {
+      const response = await fetch(buildUrl(fileName), {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Datei konnte nicht geladen werden.");
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      objectUrls.push(url);
+      return url;
+    };
+
+    const run = async () => {
+      try {
+        const nextPreview: { pdf?: string; images: Record<string, string> } = { images: {} };
+        if (entry.files.postcard) {
+          nextPreview.pdf = await fetchBlobUrl(entry.files.postcard);
+        }
+        for (const image of entry.files.images) {
+          try {
+            nextPreview.images[image] = await fetchBlobUrl(image);
+          } catch (error) {
+            console.warn(`Bild ${image} konnte nicht geladen werden.`, error);
+          }
+        }
+        if (!cancelled) {
+          setMediaPreview(nextPreview);
+        }
+      } catch (error) {
+        console.warn("Medien konnten nicht geladen werden.", error);
+        if (!cancelled) {
+          setMediaPreview({ images: {} });
+        }
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [entry, backendUrl]);
 
   const statusLabel = useMemo(() => {
     switch (entry?.status) {
@@ -98,7 +159,7 @@ export default function EntryDetailPage() {
     }
   };
 
-  const pdfUrl = entry && backendUrl ? `${backendUrl}/api/admin/entries/${entry.ref}/files/${encodeURIComponent(entry.files.postcard)}` : null;
+  const pdfUrl = mediaPreview.pdf ?? null;
   const zipUrl = entry && backendUrl ? `${backendUrl}/api/admin/entries/${entry.ref}/download/zip` : null;
 
   return (
@@ -212,20 +273,21 @@ export default function EntryDetailPage() {
               {entry.files.images.length === 0 && <p>Keine Bilder hochgeladen.</p>}
               {entry.files.images.length > 0 && (
                 <div className={styles.imagesGrid}>
-                  {entry.files.images.map((image) => (
-                    <a
-                      key={image}
-                      href={backendUrl ? `${backendUrl}/api/admin/entries/${entry.ref}/files/${encodeURIComponent(image)}` : "#"}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <img
-                        className={styles.thumbnail}
-                        src={backendUrl ? `${backendUrl}/api/admin/entries/${entry.ref}/files/${encodeURIComponent(image)}` : undefined}
-                        alt={`Bild ${image}`}
-                      />
-                    </a>
-                  ))}
+                  {entry.files.images.map((image) => {
+                    const previewUrl = mediaPreview.images[image];
+                    const downloadUrl = backendUrl
+                      ? `${backendUrl}/api/admin/entries/${entry.ref}/files/${encodeURIComponent(image)}`
+                      : undefined;
+                    return (
+                      <a key={image} href={downloadUrl} target="_blank" rel="noreferrer">
+                        {previewUrl ? (
+                          <img className={styles.thumbnail} src={previewUrl} alt={`Bild ${image}`} />
+                        ) : (
+                          <div className={styles.thumbnailFallback}>Vorschau nicht verfügbar</div>
+                        )}
+                      </a>
+                    );
+                  })}
                 </div>
               )}
             </article>

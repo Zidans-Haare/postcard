@@ -158,6 +158,18 @@
   background: #f5f7fb;
 }
 
+.thumbnailFallback {
+  width: 100%;
+  min-height: 140px;
+  border-radius: 16px;
+  border: 1px dashed rgba(148, 163, 184, 0.5);
+  background: rgba(248, 250, 252, 0.8);
+  display: grid;
+  place-items: center;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
 .statusBox {
   padding: 0.85rem 1rem;
   border-radius: 14px;
