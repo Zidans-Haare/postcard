@@ -1,0 +1,97 @@
+.wrapper {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background: radial-gradient(circle at 20% 20%, rgba(30, 64, 175, 0.45), transparent 45%),
+    radial-gradient(circle at 80% 30%, rgba(14, 116, 144, 0.35), transparent 55%),
+    #0f172a;
+}
+
+.card {
+  width: min(480px, 100%);
+  background: rgba(15, 23, 42, 0.85);
+  border-radius: 18px;
+  padding: 2.5rem;
+  box-shadow: 0 40px 80px -45px rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #f1f5f9;
+}
+
+.title {
+  margin: 0 0 0.5rem 0;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: 0 0 1.5rem 0;
+  color: rgba(226, 232, 240, 0.75);
+  line-height: 1.5;
+}
+
+.label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  color: #e2e8f0;
+}
+
+.input {
+  width: 100%;
+  padding: 0.8rem 0.95rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.65);
+  color: inherit;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.35);
+}
+
+.button {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(100deg, #38bdf8, #2563eb);
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.status {
+  margin-top: 1rem;
+  border-radius: 10px;
+  padding: 0.8rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.statusError {
+  background: rgba(248, 113, 113, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: #fecaca;
+}
+
+.statusSuccess {
+  background: rgba(52, 211, 153, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #bbf7d0;
+}
