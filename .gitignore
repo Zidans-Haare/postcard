@@ -1,0 +1,10 @@
+node_modules
+.next
+out
+.DS_Store
+coverage
+dist
+uploads
+.env
+.env.*
+*.log

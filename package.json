@@ -1,0 +1,19 @@
+{
+  "name": "postkarte",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "admin",
+    "backend"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev": "npm run dev --workspaces",
+    "lint": "npm run lint --workspaces",
+    "format": "npm run format --workspaces"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
