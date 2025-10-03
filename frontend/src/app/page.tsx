@@ -46,7 +46,7 @@ export default function Page() {
   const [status, setStatus] = useState<{ type: "idle" | "error" | "success"; message: string; ref?: string }>(
     { type: "idle", message: "" }
   );
-  const [statusRef, setStatusRef] = useState("\");
+  const [statusQuery, setStatusQuery] = useState("");
   const [statusLookup, setStatusLookup] = useState<
     | { state: "idle" }
     | { state: "loading" }
@@ -300,7 +300,7 @@ export default function Page() {
       return;
     }
 
-    const trimmedRef = statusRef.trim().toUpperCase();
+    const trimmedRef = statusQuery.trim().toUpperCase();
     if (!trimmedRef) {
       setStatusLookup({ state: "error", message: "Bitte eine Referenz-ID eingeben." });
       return;
@@ -701,11 +701,11 @@ export default function Page() {
         </div>
         <form className={styles.statusForm} onSubmit={handleStatusLookup}>
           <div className={styles.statusInputRow}>
-            <input
-              className={styles.statusInput}
-              value={statusRef}
-              onChange={(event) => setStatusRef(event.target.value)}
-              placeholder="Referenz-ID (z. B. AB12CD34)"
+              <input
+                className={styles.statusInput}
+                value={statusQuery}
+                onChange={(event) => setStatusQuery(event.target.value)}
+                placeholder="Referenz-ID (z. B. AB12CD34)"
               aria-label="Referenz-ID"
             />
             <button className={styles.statusButton} type="submit">
