@@ -1,8 +1,29 @@
 import express, { type Router } from "express";
 import { HttpError } from "../lib/errors";
-import { loadMeta } from "../lib/storage";
+import { getRecentEntries, loadMeta } from "../lib/storage";
 
 const statusRouter: Router = express.Router();
+
+statusRouter.get("/recent", async (_req, res, next) => {
+  try {
+    const entries = await getRecentEntries(6);
+    res.json({
+      ok: true,
+      items: entries.map((entry) => ({
+        ref: entry.ref,
+        receivedAt: entry.receivedAt,
+        status: entry.status,
+        fullName: entry.fields.fullName,
+        location: entry.fields.location ?? null,
+        term: entry.fields.term ?? null,
+        faculty: entry.fields.faculty ?? null,
+        postcard: entry.files.postcard,
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 statusRouter.get("/:ref", async (req, res, next) => {
   try {

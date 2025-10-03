@@ -273,6 +273,11 @@ export async function exportAsJson(filter: ListFilter = {}): Promise<EntryMeta[]
   return metas;
 }
 
+export async function getRecentEntries(limit = 6): Promise<EntrySummary[]> {
+  const entries = await listEntries();
+  return entries.slice(0, limit);
+}
+
 const CSV_HEADERS = [
   "ref",
   "receivedAt",

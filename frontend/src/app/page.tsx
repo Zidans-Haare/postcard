@@ -61,6 +61,62 @@ export default function Page() {
         };
       }
   >({ state: "idle" });
+  const [recentEntries, setRecentEntries] = useState<Array<{
+    ref: string;
+    receivedAt: string;
+    status: 'approved' | 'received' | 'deleted';
+    fullName: string;
+    location: string | null;
+    term: string | null;
+    faculty: string | null;
+    postcard: string;
+  }>>([]);
+  const [recentError, setRecentError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!backendUrl) {
+      setRecentEntries([]);
+      return;
+    }
+
+    const controller = new AbortController();
+    setRecentError(null);
+
+    fetch(`${backendUrl.replace(/\/$/, "")}/api/status/recent`, {
+      credentials: "include",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const payload = await response.json().catch(() => null);
+          throw new Error(payload?.message || "Einträge konnten nicht geladen werden.");
+        }
+        return response.json() as Promise<{
+          ok: boolean;
+          items: Array<{
+            ref: string;
+            receivedAt: string;
+            status: "approved" | "received" | "deleted";
+            fullName: string;
+            location: string | null;
+            term: string | null;
+            faculty: string | null;
+            postcard: string;
+          }>;
+        }>;
+      })
+      .then((data) => {
+        setRecentEntries(data.items);
+      })
+      .catch((error) => {
+        if (error.name === 'AbortError') return;
+        console.warn('Recent entries failed', error);
+        setRecentError('Aktuelle Einreichungen konnten nicht geladen werden.');
+      });
+
+    return () => controller.abort();
+  }, [backendUrl]);
+
   const statusRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -110,6 +166,11 @@ export default function Page() {
     received: "Eingegangen",
     deleted: "Soft Delete",
   };
+  const formatDateTimeShort = (iso: string) => new Date(iso).toLocaleDateString("de-DE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 
   const formatDateTime = (iso?: string | null) => {
     if (!iso) return null;
@@ -670,17 +731,6 @@ export default function Page() {
               )}
             </div>
 
-            <div>
-              <h2 className={styles.sectionTitle}>Hilfreiche Links</h2>
-              <div className={styles.resourceLinks}>
-                <a href="https://www.canva.com/" target="_blank" rel="noreferrer">
-                  Canva-Vorlage öffnen
-                </a>
-                <a href="/vorlage.pdf" download>
-                  PDF-Vorlage herunterladen
-                </a>
-              </div>
-            </div>
           </div>
         </aside>
       </div>
@@ -740,6 +790,36 @@ export default function Page() {
             )}
           </div>
         </form>
+      </section>
+
+
+      <section className={`${styles.panel} ${styles.recentPanel}`} aria-live="polite">
+        <div>
+          <h2 className={styles.sectionTitle}>Gerade eingereichte Postkarten</h2>
+          <p className={styles.recentLead}>
+            Lass dich von den neuesten Einsendungen inspirieren. Jede Karte zeigt, wie das finale Layout wirkt.
+          </p>
+        </div>
+        {recentError && <p className={styles.recentError}>{recentError}</p>}
+        {!recentError && recentEntries.length === 0 && (
+          <p className={styles.recentEmpty}>Noch keine Einreichungen – sei die erste Person, die ihre Postkarte teilt!</p>
+        )}
+        <div className={styles.recentGrid}>
+          {recentEntries.map((entry) => (
+            <article key={entry.ref} className={styles.recentCard}>
+              <header>
+                <span className={styles.recentStatus}>{statusLabelMap[entry.status]}</span>
+                <strong>{entry.fullName}</strong>
+              </header>
+              <p className={styles.recentMeta}>
+                {entry.location && <span>{entry.location}</span>}
+                {entry.term && <span>{entry.term}</span>}
+              </p>
+              <p className={styles.recentDate}>Eingereicht am {formatDateTimeShort(entry.receivedAt)}</p>
+              <p className={styles.recentHint}>Referenz: {entry.ref}</p>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className={styles.infoGrid}>

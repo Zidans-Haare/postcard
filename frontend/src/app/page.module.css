@@ -457,21 +457,6 @@
   background: #f8fafc;
 }
 
-.resourceLinks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.85rem;
-}
-
-.resourceLinks a {
-  border-radius: 999px;
-  padding: 0.7rem 1.6rem;
-  text-decoration: none;
-  border: 1px solid rgba(15, 23, 42, 0.3);
-  color: #0f172a;
-  background: rgba(15, 23, 42, 0.05);
-  font-weight: 600;
-}
 
 .fileList {
   margin-top: 0.75rem;
@@ -634,6 +619,95 @@
   margin: 0;
   color: #475569;
   line-height: 1.6;
+}
+
+.recentPanel {
+  margin: 3rem auto 0;
+  max-width: 1120px;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.recentLead {
+  margin: 0;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.recentError {
+  margin: 0;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.recentEmpty {
+  margin: 0;
+  color: #475569;
+}
+
+.recentGrid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 960px) {
+  .recentGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.recentCard {
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(248, 250, 252, 0.8);
+  padding: 1.3rem 1.5rem;
+  display: grid;
+  gap: 0.65rem;
+  color: #0f172a;
+}
+
+.recentCard header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.recentStatus {
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  background: rgba(14, 116, 144, 0.12);
+  color: #0e7490;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.recentMeta {
+  margin: 0;
+  color: #475569;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.recentMeta span {
+  background: rgba(15, 23, 42, 0.05);
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+
+.recentDate {
+  margin: 0;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.recentHint {
+  margin: 0;
+  color: #1e3a8a;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .infoNumber {
