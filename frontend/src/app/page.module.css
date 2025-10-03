@@ -241,6 +241,15 @@
   margin-top: 0.2rem;
 }
 
+.privacyLink {
+  color: #0e7490;
+  font-weight: 600;
+}
+
+.privacyLink:hover {
+  text-decoration: underline;
+}
+
 .buttonRow {
   display: flex;
   flex-wrap: wrap;

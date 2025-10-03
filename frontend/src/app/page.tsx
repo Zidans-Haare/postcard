@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./page.module.css";
 import { createPostcardPdf, type PostcardFormData } from "@/lib/pdf";
@@ -575,12 +576,16 @@ export default function Page() {
                     checked={agree}
                     onChange={(event) => setAgree(event.target.checked)}
                   />
-                  <label htmlFor="agree">
-                    Ich bin einverstanden, dass meine Postkarte und Bilder für HTW-Kommunikation (Web, Social Media,
-                    Print) verwendet werden. Ich habe die Datenschutzhinweise gelesen.
-                  </label>
-                </div>
+                <label htmlFor="agree">
+                  Ich bin einverstanden, dass meine Postkarte und Bilder für HTW-Kommunikation (Web, Social Media,
+                  Print) verwendet werden. Ich habe die{" "}
+                  <Link className={styles.privacyLink} href="/datenschutzhinweise" target="_blank" rel="noreferrer">
+                    Datenschutzhinweise
+                  </Link>{" "}
+                  gelesen.
+                </label>
               </div>
+            </div>
             </div>
 
             <div className={styles.buttonRow}>
