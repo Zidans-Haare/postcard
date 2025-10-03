@@ -181,56 +181,103 @@
   aspect-ratio: 842 / 595;
   border-radius: 16px;
   overflow: hidden;
-  background: linear-gradient(160deg, #1d4ed8 0%, #0f172a 100%);
-  color: white;
-  box-shadow: inset 0 0 60px rgba(15, 23, 42, 0.5);
+  background: #ffffff;
+  color: #111827;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  box-shadow: inset 0 0 40px rgba(15, 23, 42, 0.12);
 }
 
-.livePostcardInner {
-  position: absolute;
-  inset: 0;
-  padding: clamp(1.5rem, 1.2rem + 1vw, 2.4rem);
+.postcardLeft {
+  padding: clamp(1.8rem, 1.2rem + 1vw, 2.6rem);
   display: flex;
   flex-direction: column;
+  gap: 1.5rem;
+  background: #ffffff;
 }
 
-.liveHeadline {
-  font-size: clamp(1.4rem, 1rem + 1vw, 2rem);
+.postcardLogo {
+  display: flex;
+  flex-direction: column;
   font-weight: 700;
-  margin-bottom: 1.5rem;
+  font-size: clamp(1.4rem, 1.1rem + 0.8vw, 1.8rem);
+  line-height: 1.1;
+  color: #1f2937;
 }
 
-.liveName {
-  font-size: clamp(1.8rem, 1.4rem + 1vw, 2.4rem);
-  font-weight: 700;
-  margin: 0;
+.postcardLogo span:last-child {
+  color: #ec6d13;
 }
 
-.liveFaculty {
-  margin-top: 0.35rem;
-  font-size: 1rem;
-  opacity: 0.85;
-}
-
-.liveInfo {
-  margin-top: auto;
-  display: grid;
-  gap: 0.35rem;
-  font-size: 0.95rem;
-}
-
-.liveMessageTitle {
+.postcardHeading {
+  font-size: clamp(1.4rem, 1rem + 1vw, 1.9rem);
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 0.85rem;
-  opacity: 0.7;
-  margin-bottom: 0.6rem;
+  font-family: "Times New Roman", Times, Georgia, serif;
 }
 
-.liveMessage {
-  line-height: 1.5;
-  font-size: 1.05rem;
+.postcardGreeting {
+  font-family: "Times New Roman", Times, Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.postcardMessage {
+  font-family: "Times New Roman", Times, Georgia, serif;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #374151;
+  white-space: pre-wrap;
+}
+
+.postcardSignature {
+  margin-top: auto;
+  font-family: "Times New Roman", Times, Georgia, serif;
+  display: grid;
+  gap: 0.2rem;
+  color: #374151;
+}
+
+.postcardRight {
+  position: relative;
+  padding: clamp(1.6rem, 1.2rem + 1vw, 2.2rem);
+  background: #ec6d13;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.postcardStamp {
+  position: absolute;
+  top: clamp(1rem, 0.8rem + 1vw, 2.2rem);
+  right: clamp(1rem, 0.8rem + 1vw, 2.2rem);
+  display: grid;
+  gap: 0.4rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.postcardStamp span {
+  display: block;
+  border-top: 2px solid currentColor;
+  width: 120px;
+}
+
+.postcardAddress {
+  display: grid;
+  gap: 0.6rem;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.postcardAddress span {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+  padding-bottom: 0.2rem;
+}
+
+.postcardAddress span:last-child {
+  border-bottom: none;
 }
 
 .pdfPreview {

@@ -62,6 +62,10 @@ export default function Page() {
 
   const charCount = message.length;
   const emailValid = EMAIL_REGEX.test(email.trim());
+  const trimmedLocation = location.trim();
+  const trimmedMessage = message.trim();
+  const trimmedName = fullName.trim();
+  const trimmedTerm = term.trim();
 
   const totalBytes = useMemo(() => {
     const imagesBytes = images.reduce((sum, item) => sum + item.file.size, 0);
@@ -463,21 +467,36 @@ export default function Page() {
         <aside className={styles.previewCard} aria-live="polite">
           <div className={styles.previewSurface}>
             <div className={styles.livePostcard}>
-              <div className={styles.livePostcardInner}>
-                <div className={styles.liveHeadline}>Digitale Postkarte</div>
-                <h2 className={styles.liveName}>{fullName || "Dein Name"}</h2>
-                <div className={styles.liveFaculty}>{faculty || "Fakultät"}</div>
-                <div className={styles.liveInfo}>
-                  <div>
-                    <strong>Ort/Uni:</strong> {location || "—"}
-                  </div>
-                  <div>
-                    <strong>Zeitraum:</strong> {term || "—"}
-                  </div>
-                  <div>
-                    <div className={styles.liveMessageTitle}>Kurztext</div>
-                    <div className={styles.liveMessage}>{message || "Hier erscheint dein Text."}</div>
-                  </div>
+              <div className={styles.postcardLeft}>
+                <div className={styles.postcardLogo}>
+                  <span>STURA</span>
+                  <span>HTWD</span>
+                </div>
+                <div className={styles.postcardHeading}>Liebe Kommiliton:innen</div>
+                <div className={styles.postcardGreeting}>
+                  Liebe Grüße aus {trimmedLocation || "…"}
+                </div>
+                <div className={styles.postcardMessage}>
+                  {trimmedMessage || "Hier steht dein Kurztext."}
+                </div>
+                <div className={styles.postcardSignature}>
+                  <strong>{trimmedName || "Deine Unterschrift"}</strong>
+                  {trimmedTerm && <span>{trimmedTerm}</span>}
+                  {faculty && <span>{faculty}</span>}
+                </div>
+              </div>
+              <div className={styles.postcardRight}>
+                <div className={styles.postcardStamp} aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <div className={styles.postcardAddress}>
+                  <span>HTW Dresden</span>
+                  <span>Stabstelle Internationales</span>
+                  <span>Friedrich-List Platz 1</span>
+                  <span>01069 Dresden</span>
                 </div>
               </div>
             </div>
