@@ -29,6 +29,7 @@ interface ImageItem {
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 export default function Page() {
+  const backendBase = backendUrl ? backendUrl.replace(/\/$/, "") : null;
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [emailTouched, setEmailTouched] = useState(false);
@@ -64,25 +65,28 @@ export default function Page() {
   const [recentEntries, setRecentEntries] = useState<Array<{
     ref: string;
     receivedAt: string;
-    status: 'approved' | 'received' | 'deleted';
-    fullName: string;
     location: string | null;
-    term: string | null;
-    faculty: string | null;
-    postcard: string;
+    postcardAvailable: boolean;
   }>>([]);
+  const [recentPreviews, setRecentPreviews] = useState<Record<string, string>>({});
   const [recentError, setRecentError] = useState<string | null>(null);
+  const recentPreviewsRef = useRef<Record<string, string>>({});
 
   useEffect(() => {
-    if (!backendUrl) {
+    if (!backendBase) {
       setRecentEntries([]);
+      if (Object.keys(recentPreviewsRef.current).length > 0) {
+        Object.values(recentPreviewsRef.current).forEach((url) => URL.revokeObjectURL(url));
+        recentPreviewsRef.current = {};
+        setRecentPreviews({});
+      }
       return;
     }
 
     const controller = new AbortController();
     setRecentError(null);
 
-    fetch(`${backendUrl.replace(/\/$/, "")}/api/status/recent`, {
+    fetch(`${backendBase}/api/status/recent`, {
       credentials: "include",
       signal: controller.signal,
     })
@@ -96,12 +100,8 @@ export default function Page() {
           items: Array<{
             ref: string;
             receivedAt: string;
-            status: "approved" | "received" | "deleted";
-            fullName: string;
             location: string | null;
-            term: string | null;
-            faculty: string | null;
-            postcard: string;
+            postcardAvailable: boolean;
           }>;
         }>;
       })
@@ -115,7 +115,79 @@ export default function Page() {
       });
 
     return () => controller.abort();
-  }, [backendUrl]);
+  }, [backendBase]);
+
+  useEffect(() => {
+    recentPreviewsRef.current = recentPreviews;
+  }, [recentPreviews]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(recentPreviewsRef.current).forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!backendBase || recentEntries.length === 0) {
+      if (Object.keys(recentPreviewsRef.current).length > 0) {
+        Object.values(recentPreviewsRef.current).forEach((url) => URL.revokeObjectURL(url));
+        recentPreviewsRef.current = {};
+        setRecentPreviews({});
+      }
+      return;
+    }
+
+    let cancelled = false;
+    const controller = new AbortController();
+
+    const loadPreviews = async () => {
+      const next: Record<string, string> = {};
+      for (const entry of recentEntries) {
+        if (!entry.postcardAvailable || cancelled) continue;
+        try {
+          const response = await fetch(
+            `${backendBase}/api/status/${encodeURIComponent(entry.ref)}/postcard`,
+            {
+              credentials: "include",
+              signal: controller.signal,
+            }
+          );
+          if (!response.ok) {
+            continue;
+          }
+          const blob = await response.blob();
+          if (cancelled) {
+            continue;
+          }
+          const objectUrl = URL.createObjectURL(blob);
+          if (cancelled) {
+            URL.revokeObjectURL(objectUrl);
+            continue;
+          }
+          next[entry.ref] = objectUrl;
+        } catch (error) {
+          if ((error as Error).name === "AbortError") {
+            return;
+          }
+          console.warn("Postcard preview failed", error);
+        }
+      }
+      if (cancelled) {
+        Object.values(next).forEach((url) => URL.revokeObjectURL(url));
+        return;
+      }
+      Object.values(recentPreviewsRef.current).forEach((url) => URL.revokeObjectURL(url));
+      recentPreviewsRef.current = next;
+      setRecentPreviews(next);
+    };
+
+    loadPreviews();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [backendBase, recentEntries]);
 
   const statusRef = useRef<HTMLDivElement | null>(null);
 
@@ -277,7 +349,7 @@ export default function Page() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!backendUrl) {
+    if (!backendBase) {
       setStatus({ type: "error", message: "Backend-URL ist nicht konfiguriert." });
       return;
     }
@@ -328,7 +400,7 @@ export default function Page() {
         formData.append("images", item.file, item.file.name || `bild_${index + 1}.jpg`);
       });
 
-      const response = await fetch(`${backendUrl.replace(/\/$/, "")}/api/upload`, {
+      const response = await fetch(`${backendBase}/api/upload`, {
         method: "POST",
         body: formData,
       });
@@ -356,7 +428,7 @@ export default function Page() {
 
   const handleStatusLookup = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!backendUrl) {
+    if (!backendBase) {
       setStatusLookup({ state: "error", message: "Backend-URL ist nicht konfiguriert." });
       return;
     }
@@ -371,7 +443,7 @@ export default function Page() {
 
     try {
       const response = await fetch(
-        `${backendUrl.replace(/\/$/, "")}/api/status/${encodeURIComponent(trimmedRef)}`
+        `${backendBase}/api/status/${encodeURIComponent(trimmedRef)}`
       );
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
@@ -735,10 +807,81 @@ export default function Page() {
         </aside>
       </div>
 
-      <section className={styles.supportStrip}>
-        <strong>Kontakt StuRa HTW Dresden</strong>
-        <span>Stabstelle Internationales · Friedrich-List Platz 1 · 01069 Dresden</span>
-        <span>Fragen? Schreib uns an internationale@stura.htw-dresden.de</span>
+      <section className={styles.infoGrid}>
+        <article className={styles.infoCard}>
+          <div className={styles.infoNumber}>1</div>
+          <h3>Postkarte gestalten</h3>
+          <p>Fülle die Felder aus und nutze die Live-Vorschau, um Layout und Text abzustimmen.</p>
+        </article>
+        <article className={styles.infoCard}>
+          <div className={styles.infoNumber}>2</div>
+          <h3>PDF erzeugen</h3>
+          <p>Klicke auf „Postkarte erzeugen (PDF)“ – das PDF entspricht dem HTW-Layout.</p>
+        </article>
+        <article className={styles.infoCard}>
+          <div className={styles.infoNumber}>3</div>
+          <h3>Einreichen &amp; verfolgen</h3>
+          <p>Nach dem Upload erhältst du eine Referenz-ID. Die StuRa-Admins sehen den Eintrag sofort.</p>
+        </article>
+      </section>
+
+      <section className={`${styles.panel} ${styles.recentPanel}`} aria-live="polite">
+        <div>
+          <h2 className={styles.sectionTitle}>Gerade eingereichte Postkarten</h2>
+          <p className={styles.recentLead}>
+            Lass dich von den neuesten Einsendungen inspirieren. Jede Karte zeigt, wie das finale Layout wirkt.
+          </p>
+        </div>
+        {recentError && <p className={styles.recentError}>{recentError}</p>}
+        {!recentError && recentEntries.length === 0 && (
+          <p className={styles.recentEmpty}>Noch keine Einreichungen – sei die erste Person, die ihre Postkarte teilt!</p>
+        )}
+        <div className={styles.recentGrid}>
+          {recentEntries.map((entry) => {
+            const previewUrl = backendBase
+              ? `${backendBase}/api/status/${encodeURIComponent(entry.ref)}/postcard`
+              : null;
+            const previewBlobUrl = recentPreviews[entry.ref];
+            return (
+              <article key={entry.ref} className={styles.recentCard}>
+                <div className={styles.recentPreview}>
+                  {previewBlobUrl ? (
+                    <object
+                      className={styles.recentPreviewFrame}
+                      data={previewBlobUrl}
+                      type="application/pdf"
+                    >
+                      <a href={previewUrl} target="_blank" rel="noreferrer">
+                        Postkarte öffnen
+                      </a>
+                    </object>
+                  ) : (
+                    <div className={styles.recentPreviewFallback}>
+                      <span>
+                        {entry.postcardAvailable
+                          ? "Vorschau wird geladen…"
+                          : "Vorschau nicht verfügbar"}
+                      </span>
+                      {previewUrl && (
+                        <a href={previewUrl} target="_blank" rel="noreferrer">
+                          Postkarte öffnen
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className={styles.recentDetails}>
+                  <p className={styles.recentLocation}>
+                    {entry.location || "Ort/Uni nicht angegeben"}
+                  </p>
+                  <p className={styles.recentDate}>
+                    Eingereicht am {formatDateTimeShort(entry.receivedAt)}
+                  </p>
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </section>
 
       <section className={`${styles.panel} ${styles.statusPanel}`}>
@@ -792,52 +935,10 @@ export default function Page() {
         </form>
       </section>
 
-
-      <section className={`${styles.panel} ${styles.recentPanel}`} aria-live="polite">
-        <div>
-          <h2 className={styles.sectionTitle}>Gerade eingereichte Postkarten</h2>
-          <p className={styles.recentLead}>
-            Lass dich von den neuesten Einsendungen inspirieren. Jede Karte zeigt, wie das finale Layout wirkt.
-          </p>
-        </div>
-        {recentError && <p className={styles.recentError}>{recentError}</p>}
-        {!recentError && recentEntries.length === 0 && (
-          <p className={styles.recentEmpty}>Noch keine Einreichungen – sei die erste Person, die ihre Postkarte teilt!</p>
-        )}
-        <div className={styles.recentGrid}>
-          {recentEntries.map((entry) => (
-            <article key={entry.ref} className={styles.recentCard}>
-              <header>
-                <span className={styles.recentStatus}>{statusLabelMap[entry.status]}</span>
-                <strong>{entry.fullName}</strong>
-              </header>
-              <p className={styles.recentMeta}>
-                {entry.location && <span>{entry.location}</span>}
-                {entry.term && <span>{entry.term}</span>}
-              </p>
-              <p className={styles.recentDate}>Eingereicht am {formatDateTimeShort(entry.receivedAt)}</p>
-              <p className={styles.recentHint}>Referenz: {entry.ref}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className={styles.infoGrid}>
-        <article className={styles.infoCard}>
-          <div className={styles.infoNumber}>1</div>
-          <h3>Postkarte gestalten</h3>
-          <p>Fülle die Felder aus und nutze die Live-Vorschau, um Layout und Text abzustimmen.</p>
-        </article>
-        <article className={styles.infoCard}>
-          <div className={styles.infoNumber}>2</div>
-          <h3>PDF erzeugen</h3>
-          <p>Klicke auf „Postkarte erzeugen (PDF)“ – das PDF entspricht dem HTW-Layout.</p>
-        </article>
-        <article className={styles.infoCard}>
-          <div className={styles.infoNumber}>3</div>
-          <h3>Einreichen &amp; verfolgen</h3>
-          <p>Nach dem Upload erhältst du eine Referenz-ID. Die StuRa-Admins sehen den Eintrag sofort.</p>
-        </article>
+      <section className={styles.supportStrip}>
+        <strong>Kontakt StuRa HTW Dresden</strong>
+        <span>Stabstelle Internationales · Friedrich-List Platz 1 · 01069 Dresden</span>
+        <span>Fragen? Schreib uns an internationale@stura.htw-dresden.de</span>
       </section>
     </main>
   );

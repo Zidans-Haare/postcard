@@ -1,6 +1,6 @@
 import express, { type Router } from "express";
 import { HttpError } from "../lib/errors";
-import { getRecentEntries, loadMeta } from "../lib/storage";
+import { getFilePath, getRecentEntries, loadMeta } from "../lib/storage";
 
 const statusRouter: Router = express.Router();
 
@@ -12,14 +12,35 @@ statusRouter.get("/recent", async (_req, res, next) => {
       items: entries.map((entry) => ({
         ref: entry.ref,
         receivedAt: entry.receivedAt,
-        status: entry.status,
-        fullName: entry.fields.fullName,
         location: entry.fields.location ?? null,
-        term: entry.fields.term ?? null,
-        faculty: entry.fields.faculty ?? null,
-        postcard: entry.files.postcard,
+        postcardAvailable: Boolean(entry.files.postcard),
       })),
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+statusRouter.get("/:ref/postcard", async (req, res, next) => {
+  try {
+    const ref = req.params.ref.toUpperCase();
+    const meta = await loadMeta(ref);
+    if (!meta) {
+      throw new HttpError(404, "Referenz wurde nicht gefunden.");
+    }
+    if (!meta.files.postcard) {
+      throw new HttpError(404, "Postkarte wurde nicht gefunden.");
+    }
+    const result = await getFilePath(ref, meta.files.postcard);
+    if (!result) {
+      throw new HttpError(404, "Postkarte wurde nicht gefunden.");
+    }
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${meta.files.postcard}"`
+    );
+    res.sendFile(result.path);
   } catch (error) {
     next(error);
   }

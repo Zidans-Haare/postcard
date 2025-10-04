@@ -19,7 +19,8 @@ export function buildDateSegment(date: Date): string {
   return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
 }
 
-const EMAIL_REGEX = /^(?:[a-zA-Z0-9_'^&+{}=\-](?:\.?[a-zA-Z0-9_'^&+{}=\-])*)@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/;
+// eslint-disable-next-line security/detect-unsafe-regex
+const EMAIL_REGEX = /^(?:[-a-zA-Z0-9_'^&+{}=](?:\.?[-a-zA-Z0-9_'^&+{}=])*)@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/;
 
 export function isEmail(value: string): boolean {
   return EMAIL_REGEX.test(value);

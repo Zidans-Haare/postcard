@@ -255,6 +255,7 @@
   flex-wrap: wrap;
   gap: 0.9rem;
   align-items: center;
+  margin-top: 1.5rem;
 }
 
 .primaryButton,
@@ -662,52 +663,47 @@
   background: rgba(248, 250, 252, 0.8);
   padding: 1.3rem 1.5rem;
   display: grid;
-  gap: 0.65rem;
+  gap: 1rem;
   color: #0f172a;
 }
 
-.recentCard header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
+.recentPreview {
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(148, 163, 184, 0.15);
+  min-height: 220px;
 }
 
-.recentStatus {
-  border-radius: 999px;
-  padding: 0.35rem 0.8rem;
-  background: rgba(14, 116, 144, 0.12);
-  color: #0e7490;
-  font-weight: 600;
-  font-size: 0.85rem;
+.recentPreviewFrame {
+  width: 100%;
+  height: 240px;
+  border: none;
 }
 
-.recentMeta {
-  margin: 0;
+.recentPreviewFallback {
+  display: grid;
+  place-items: center;
+  height: 240px;
   color: #475569;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  font-size: 0.9rem;
+  gap: 0.35rem;
+  text-align: center;
 }
 
-.recentMeta span {
-  background: rgba(15, 23, 42, 0.05);
-  padding: 0.2rem 0.6rem;
-  border-radius: 999px;
-  font-size: 0.85rem;
+.recentDetails {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.recentLocation {
+  margin: 0;
+  font-weight: 600;
 }
 
 .recentDate {
   margin: 0;
   color: #475569;
   font-size: 0.9rem;
-}
-
-.recentHint {
-  margin: 0;
-  color: #1e3a8a;
-  font-size: 0.85rem;
-  font-weight: 600;
 }
 
 .infoNumber {

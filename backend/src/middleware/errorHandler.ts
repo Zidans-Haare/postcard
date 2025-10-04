@@ -1,7 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
 import { HttpError } from "../lib/errors";
 
-export function errorHandler(err: unknown, _: Request, res: Response, __: NextFunction) {
+export function errorHandler(err: unknown, _: Request, res: Response, _next: NextFunction) {
+  void _next;
   if (err instanceof HttpError) {
     res.status(err.status).json({ ok: false, message: err.message });
     return;
