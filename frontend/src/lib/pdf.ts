@@ -213,7 +213,8 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
   });
 
   const bytes = await doc.save();
-  const blob = new Blob([bytes], { type: "application/pdf" });
+  const normalizedBytes = Uint8Array.from(bytes);
+  const blob = new Blob([normalizedBytes], { type: "application/pdf" });
   const fileName = `Digitale_Postkarte_${Date.now()}.pdf`;
   return new File([blob], fileName, { type: "application/pdf" });
 }

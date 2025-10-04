@@ -51,7 +51,11 @@ uploadRouter.post("/", uploadLimiter, uploadFields, async (req, res, next) => {
     }
     const fields = parsed.data;
 
-    const postcardFiles = (req.files?.postcard || []) as Express.Multer.File[];
+    const files = req.files;
+    const fileGroups: Record<string, Express.Multer.File[]> =
+      files && !Array.isArray(files) ? files : {};
+
+    const postcardFiles = fileGroups.postcard ?? [];
     if (postcardFiles.length !== 1) {
       throw new HttpError(400, "PDF-Datei ist erforderlich.");
     }
@@ -64,7 +68,7 @@ uploadRouter.post("/", uploadLimiter, uploadFields, async (req, res, next) => {
     }
     const postcardFile = toUploadedFile(postcard);
 
-    const imageFiles = ((req.files?.images as Express.Multer.File[]) || []).map(toUploadedFile);
+    const imageFiles = (fileGroups.images ?? []).map(toUploadedFile);
     if (imageFiles.length > MAX_FILE_RULES.maxImages) {
       throw new HttpError(400, "Es sind höchstens 5 Bilder erlaubt.");
     }

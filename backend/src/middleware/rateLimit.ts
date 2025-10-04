@@ -1,5 +1,17 @@
+import type { Request } from "express";
 import rateLimit from "express-rate-limit";
 import { config } from "../config";
+
+function determineClientIp(req: Request): string {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.length > 0) {
+    return forwarded.split(",")[0].trim();
+  }
+  if (Array.isArray(forwarded) && forwarded.length > 0) {
+    return forwarded[0].trim();
+  }
+  return req.ip || req.socket.remoteAddress || "unknown";
+}
 
 export const uploadLimiter = rateLimit({
   windowMs: config.rateLimits.upload.windowMs,
@@ -7,7 +19,7 @@ export const uploadLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { ok: false, message: "Zu viele Uploads. Bitte später erneut versuchen." },
-  keyGenerator: (req) => req.ip,
+  keyGenerator: (req) => determineClientIp(req),
 });
 
 export const loginLimiter = rateLimit({
@@ -16,5 +28,5 @@ export const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { ok: false, message: "Zu viele Loginversuche. Bitte warte einen Moment." },
-  keyGenerator: (req) => req.ip,
+  keyGenerator: (req) => determineClientIp(req),
 });

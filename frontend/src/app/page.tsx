@@ -840,7 +840,7 @@ export default function Page() {
           {recentEntries.map((entry) => {
             const previewUrl = backendBase
               ? `${backendBase}/api/status/${encodeURIComponent(entry.ref)}/postcard`
-              : null;
+              : undefined;
             const previewBlobUrl = recentPreviews[entry.ref];
             return (
               <article key={entry.ref} className={styles.recentCard}>
@@ -851,9 +851,11 @@ export default function Page() {
                       data={previewBlobUrl}
                       type="application/pdf"
                     >
-                      <a href={previewUrl} target="_blank" rel="noreferrer">
-                        Postkarte öffnen
-                      </a>
+                      {previewUrl && (
+                        <a href={previewUrl} target="_blank" rel="noreferrer">
+                          Postkarte öffnen
+                        </a>
+                      )}
                     </object>
                   ) : (
                     <div className={styles.recentPreviewFallback}>

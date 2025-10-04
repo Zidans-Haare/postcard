@@ -15,7 +15,7 @@ const envSchema = z.object({
   UPLOAD_DIR: z.string().default("./uploads"),
   ADMIN_USER: z.string().min(3),
   ADMIN_PASS: z.string().min(8),
-  SESSION_SECRET: z.string().min(16).optional(),
+  SESSION_SECRET: z.string().min(16),
   SESSION_NAME: z.string().default("postkarte.sid"),
   RETENTION_MONTHS: z.coerce.number().int().positive().optional(),
 });
