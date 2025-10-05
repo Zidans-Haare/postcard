@@ -12,6 +12,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(4000),
   ALLOW_ORIGIN_FRONTEND: z.string().url(),
   ALLOW_ORIGIN_ADMIN: z.string().url(),
+  EXTRA_ALLOWED_ORIGINS: z.string().optional(),
   UPLOAD_DIR: z.string().default("./uploads"),
   ADMIN_USER: z.string().min(3),
   ADMIN_PASS: z.string().min(8),
@@ -29,7 +30,17 @@ const parsed = envSchema.parse({
 export const config = {
   env: parsed.NODE_ENV,
   port: parsed.PORT,
-  allowOrigins: [parsed.ALLOW_ORIGIN_FRONTEND, parsed.ALLOW_ORIGIN_ADMIN],
+  allowOrigins: Array.from(
+    new Set(
+      [
+        parsed.ALLOW_ORIGIN_FRONTEND,
+        parsed.ALLOW_ORIGIN_ADMIN,
+        ...(parsed.EXTRA_ALLOWED_ORIGINS
+          ? parsed.EXTRA_ALLOWED_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean)
+          : []),
+      ].filter(Boolean)
+    )
+  ),
   uploadDir: resolve(parsed.UPLOAD_DIR),
   adminUser: parsed.ADMIN_USER,
   adminPass: parsed.ADMIN_PASS,
