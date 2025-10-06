@@ -1,8 +1,11 @@
 import express, { type Router } from "express";
 import { HttpError } from "../lib/errors";
 import { getFilePath, getRecentEntries, loadMeta } from "../lib/storage";
+import { statusLimiter } from "../middleware/rateLimit";
 
 const statusRouter: Router = express.Router();
+
+statusRouter.use(statusLimiter);
 
 statusRouter.get("/recent", async (_req, res, next) => {
   try {

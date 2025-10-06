@@ -30,3 +30,12 @@ export const loginLimiter = rateLimit({
   message: { ok: false, message: "Zu viele Loginversuche. Bitte warte einen Moment." },
   keyGenerator: (req) => determineClientIp(req),
 });
+
+export const statusLimiter = rateLimit({
+  windowMs: config.rateLimits.status.windowMs,
+  max: config.rateLimits.status.max,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, message: "Zu viele Anfragen. Bitte warte einen Moment." },
+  keyGenerator: (req) => determineClientIp(req),
+});

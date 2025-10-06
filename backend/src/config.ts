@@ -66,5 +66,9 @@ export const config = {
       windowMs: 60_000,
       max: 30,
     },
+    status: {
+      windowMs: 60_000,
+      max: 120,
+    },
   },
 };

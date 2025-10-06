@@ -6,6 +6,7 @@ import { uploadFieldsSchema, MAX_FILE_RULES } from "../lib/validators";
 import { HttpError } from "../lib/errors";
 import { generateReference } from "../lib/utils";
 import { saveEntry, findEntry, type UploadedFile } from "../lib/storage";
+import { isPdfFile, isSupportedImage } from "../lib/fileSniff";
 
 const uploadRouter: Router = express.Router();
 
@@ -67,6 +68,9 @@ uploadRouter.post("/", uploadLimiter, uploadFields, async (req, res, next) => {
       throw new HttpError(400, "PDF darf maximal 10 MB groß sein.");
     }
     const postcardFile = toUploadedFile(postcard);
+    if (!isPdfFile(postcardFile)) {
+      throw new HttpError(415, "Die PDF-Datei ist ungültig oder beschädigt.");
+    }
 
     const imageFiles = (fileGroups.images ?? []).map(toUploadedFile);
     if (imageFiles.length > MAX_FILE_RULES.maxImages) {
@@ -78,6 +82,9 @@ uploadRouter.post("/", uploadLimiter, uploadFields, async (req, res, next) => {
       }
       if (image.size > MAX_FILE_RULES.imageMaxBytes) {
         throw new HttpError(400, "Jedes Bild darf höchstens 8 MB haben.");
+      }
+      if (!isSupportedImage(image)) {
+        throw new HttpError(415, "Bilddatei konnte nicht verifiziert werden.");
       }
     }
 
