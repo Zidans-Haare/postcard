@@ -8,4 +8,4 @@ uploads
 .env
 .env.*
 *.log
-frontend/public/postkarte-assets
+
