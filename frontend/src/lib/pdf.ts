@@ -180,8 +180,10 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
   // 3. Text Content (Left Side)
   const leftPadding = 20;
   const topPadding = 130; // Below Logo
-  const contentWidth = width - rightColWidth - leftPadding - 40;
-  const centerX = leftPadding + (contentWidth / 2);
+  // Reduce content width to make text box narrower (approx 60% of available space)
+  const availableWidth = width - rightColWidth - leftPadding - 40;
+  const contentWidth = availableWidth * 0.72;
+  const centerX = leftPadding + (availableWidth / 2);
 
   let cursorY = height - topPadding;
 

@@ -399,7 +399,7 @@
 
 .postcardMessage {
   width: 100%;
-  max-width: 75%;
+  max-width: 72%;
   /* Match PDF generation width factor */
   margin: 0 auto 2rem auto;
   /* Center horizontally */
