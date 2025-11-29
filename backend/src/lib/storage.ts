@@ -203,10 +203,28 @@ export async function writeMeta(ref: string, meta: EntryMeta): Promise<void> {
 }
 
 export async function updateStatus(ref: string, status: EntryStatus): Promise<EntryMeta | null> {
-  const existing = await loadMeta(ref);
-  if (!existing) {
+  const entry = await findEntry(ref);
+  if (!entry) {
     return null;
   }
+
+  if (status === "deleted") {
+    await fs.rm(entry.path, { recursive: true, force: true });
+    // Return a meta object representing the deleted state
+    return {
+      ref: entry.ref,
+      receivedAt: entry.receivedAt,
+      status: "deleted",
+      consent: entry.consent,
+      fields: entry.fields,
+      files: entry.files,
+      deletedAt: new Date().toISOString(),
+    };
+  }
+
+  const existing = await loadMeta(ref);
+  if (!existing) return null; // Should not happen if findEntry succeeded, but for safety
+
   const updated: EntryMeta = {
     ...existing,
     status,
@@ -214,10 +232,7 @@ export async function updateStatus(ref: string, status: EntryStatus): Promise<En
   const nowIso = new Date().toISOString();
   if (status === "approved") {
     updated.approvedAt = nowIso;
-    updated.deletedAt = undefined;
-  }
-  if (status === "deleted") {
-    updated.deletedAt = nowIso;
+    updated.deletedAt = undefined; // null in type? type says string | null | undefined
   }
   if (status === "received") {
     updated.deletedAt = undefined;

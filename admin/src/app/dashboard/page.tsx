@@ -279,7 +279,6 @@ export default function DashboardPage() {
               <th>Fakultät</th>
               <th>Ort/Uni</th>
               <th>Zeitraum</th>
-              <th>Kurztext</th>
               <th>Dateien</th>
               <th>Status</th>
               <th>Aktionen</th>
@@ -288,7 +287,7 @@ export default function DashboardPage() {
           <tbody>
             {!loading && items.length === 0 && (
               <tr>
-                <td colSpan={11} style={{ padding: "2rem", textAlign: "center" }}>
+                <td colSpan={10} style={{ padding: "2rem", textAlign: "center" }}>
                   Keine Einträge vorhanden.
                 </td>
               </tr>
@@ -302,25 +301,23 @@ export default function DashboardPage() {
                 <td>{item.fields.faculty ?? "—"}</td>
                 <td>{item.fields.location ?? "—"}</td>
                 <td>{item.fields.term ?? "—"}</td>
-                <td>{item.fields.message ?? "—"}</td>
                 <td>
                   {item.hasPdf ? "PDF" : "—"} / {item.counts.images} Bilder
                 </td>
                 <td>
                   <span
-                    className={`${styles.badge} ${
-                      item.status === "received"
-                        ? styles.badgeReceived
-                        : item.status === "approved"
+                    className={`${styles.badge} ${item.status === "received"
+                      ? styles.badgeReceived
+                      : item.status === "approved"
                         ? styles.badgeApproved
                         : styles.badgeDeleted
-                    }`}
+                      }`}
                   >
                     {item.status === "received"
                       ? "Eingegangen"
                       : item.status === "approved"
-                      ? "Freigegeben"
-                      : "Gelöscht"}
+                        ? "Freigegeben"
+                        : "Gelöscht"}
                   </span>
                 </td>
                 <td>

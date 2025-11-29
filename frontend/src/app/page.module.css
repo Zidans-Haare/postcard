@@ -317,7 +317,7 @@
   background: #ffffff;
   color: #111827;
   box-shadow: 0 22px 48px -38px rgba(15, 23, 42, 0.28);
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  border: 2px solid #000000;
 }
 
 .postcardContainer {
@@ -361,7 +361,7 @@
 .postcardLogo {
   width: 140px;
   height: auto;
-  margin-bottom: 3rem;
+  margin-bottom: 0;
   position: relative;
   z-index: 20;
 }
@@ -373,7 +373,7 @@
   align-items: center;
   text-align: center;
   z-index: 20;
-  margin-top: 10px;
+  margin-top: 0;
   /* Space for the logo overlay */
   /* Above pine branches */
   position: relative;
@@ -404,7 +404,8 @@
   margin: 0 auto 2rem auto;
   /* Center horizontally */
   font-family: "Open Sans", sans-serif;
-  font-size: clamp(0.9rem, 0.85rem + 0.3vw, 1.0rem);
+  font-size: 14px;
+  /* Fixed size to match PDF */
   line-height: 1.5;
   color: #374151;
   white-space: pre-wrap;

@@ -123,6 +123,17 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
     color: rgb(1, 1, 1),
   });
 
+  // Black Border
+  page.drawRectangle({
+    x: 0,
+    y: 0,
+    width: width,
+    height: height,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 2,
+    color: undefined, // Transparent fill
+  });
+
   // Orange background for right side
   // Width: 356px (approx 5.5/13 of A4 landscape width 842)
   const rightColWidth = 356;
