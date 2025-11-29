@@ -353,6 +353,8 @@
   width: 140px;
   height: auto;
   margin-bottom: 3rem;
+  position: relative;
+  z-index: 20;
 }
 
 .postcardTextContent {
@@ -362,9 +364,11 @@
   align-items: center;
   text-align: center;
   z-index: 20;
-  margin-top: 80px;
+  margin-top: 40px;
   /* Space for the logo overlay */
   /* Above pine branches */
+  position: relative;
+  z-index: 20;
 }
 
 .postcardHeading {
@@ -440,15 +444,18 @@
   gap: 0.5rem;
   font-family: "Open Sans", sans-serif;
   font-weight: 400;
-  font-size: clamp(1.3rem, 1.2rem + 0.4vw, 1.5rem);
+  font-size: clamp(1.1rem, 1.0rem + 0.3vw, 1.3rem);
   line-height: 1.4;
   color: #ffffff;
-  margin-bottom: 280px;
+  margin-bottom: 185px;
+  position: relative;
+  z-index: 20;
 }
 
 .postcardAddress span {
   border-bottom: 1px solid rgba(255, 255, 255, 0.6);
   padding-bottom: 0.2rem;
+  white-space: nowrap;
 }
 
 .postcardAddress span:last-child {
@@ -736,6 +743,13 @@
   margin: 3rem auto 0;
   background-color: var(--htw-white);
   padding: 2rem;
+}
+
+.successPanel {
+  background-color: var(--htw-white);
+  padding: 2rem;
+  border-radius: 2px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 @media (max-width: 1024px) {
