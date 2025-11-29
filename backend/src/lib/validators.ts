@@ -28,7 +28,7 @@ export const uploadFieldsSchema = z.object({
   term: z.string().max(100, "Zeitraum ist zu lang.").optional(),
   message: z
     .string()
-    .max(140, "Kurztext darf höchstens 140 Zeichen enthalten.")
+    .max(1000, "Kurztext darf höchstens 1000 Zeichen enthalten.")
     .optional()
     .transform((value) => (value ? value.trim() : undefined)),
   agree: z.literal("true", {

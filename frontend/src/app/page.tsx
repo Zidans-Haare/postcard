@@ -14,7 +14,7 @@ const FACULTIES = [
   "Andere",
 ] as const;
 
-const MAX_MESSAGE_LENGTH = 140;
+const MAX_MESSAGE_LENGTH = 1000;
 const MAX_IMAGE_COUNT = 5;
 const MAX_TOTAL_BYTES = 30 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
@@ -615,7 +615,7 @@ export default function Page() {
               <div>
                 <h2 className={styles.sectionTitle}>Kurztext</h2>
                 <label className={styles.label} htmlFor="message">
-                  Kurztext (max. 140 Zeichen)
+                  Kurztext (max. 1000 Zeichen)
                 </label>
                 <textarea
                   id="message"

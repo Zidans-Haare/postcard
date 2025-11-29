@@ -2,6 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  basePath: '/admin',
   headers: async () => [
     {
       source: '/:path*',
