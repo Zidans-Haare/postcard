@@ -1,8 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap');
+
 :root {
+  /* HTW Corporate Design Colors */
+  --htw-orange: #F29400;
+  --htw-dark-gray: #4D4D4D;
+  --htw-medium-gray: #878787;
+  --htw-light-gray: #F5F5F5;
+  --htw-white: #FFFFFF;
+  --htw-black: #000000;
+
+  /* Functional Colors */
+  --color-text: var(--htw-dark-gray);
+  --color-bg: var(--htw-white);
+  --color-primary: var(--htw-orange);
+  --color-border: #D1D5DB;
+
+  font-family: 'Open Sans', sans-serif;
   color-scheme: light;
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #f3f4f6;
-  color: #111827;
 }
 
 * {
@@ -12,18 +26,30 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: linear-gradient(180deg, #f9fafb 0%, #e5e7eb 100%);
+  background-color: var(--htw-white);
+  color: var(--color-text);
+  font-family: 'Open Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
   color: inherit;
+  text-decoration: none;
 }
 
 button {
   cursor: pointer;
+  font-family: inherit;
 }
 
-:focus {
-  outline: 3px solid #2563eb;
-  outline-offset: 2px;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  font-weight: 700;
+  color: var(--htw-black);
 }

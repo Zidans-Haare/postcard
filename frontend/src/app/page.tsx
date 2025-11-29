@@ -37,8 +37,7 @@ export default function Page() {
   const [emailTouched, setEmailTouched] = useState(false);
   const [faculty, setFaculty] = useState<string | "">("");
   const [location, setLocation] = useState("");
-  const [termStart, setTermStart] = useState("");
-  const [termEnd, setTermEnd] = useState("");
+  const [term, setTerm] = useState("");
   const [message, setMessage] = useState("");
   const [agree, setAgree] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
@@ -49,6 +48,127 @@ export default function Page() {
   const [status, setStatus] = useState<{ type: "idle" | "error" | "success"; message: string; ref?: string }>(
     { type: "idle", message: "" }
   );
+  const [showPreview, setShowPreview] = useState(false);
+
+  // Scroll to preview when it becomes visible
+  useEffect(() => {
+    if (showPreview) {
+      const previewElement = document.getElementById("preview-section");
+      if (previewElement) {
+        previewElement.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  }, [showPreview]);
+
+  const handleGenerate = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!fullName.trim()) {
+      setStatus({ type: "error", message: "Bitte zuerst den Namen ausfüllen." });
+      return;
+    }
+
+    setPdfGenerating(true);
+    setStatus({ type: "idle", message: "" });
+
+    try {
+      const file = await createPostcardPdf(buildPdfPayload());
+      if (file.size > MAX_PDF_BYTES) {
+        setStatus({ type: "error", message: "PDF darf maximal 10 MB groß sein." });
+        setPdfGenerating(false);
+        return;
+      }
+
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+      }
+
+      const objectUrl = URL.createObjectURL(file);
+      setPdfFile(file);
+      setPdfUrl(objectUrl);
+      setShowPreview(true);
+      setStatus({ type: "success", message: "Postkarte wurde erzeugt. Bitte überprüfe die Vorschau." });
+
+    } catch (error) {
+      console.error(error);
+      setStatus({ type: "error", message: "PDF konnte nicht erzeugt werden." });
+    } finally {
+      setPdfGenerating(false);
+    }
+  };
+
+  const handleFinalSubmit = async () => {
+    if (!formValid || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setStatus({ type: "idle", message: "" });
+
+    try {
+      // 1. Upload
+      const formData = new FormData();
+      if (pdfFile) {
+        formData.append("postcard", pdfFile);
+      }
+
+      images.forEach((item) => {
+        formData.append("images", item.file);
+      });
+
+      // Meta data
+      const meta = {
+        fullName,
+        email,
+        location: trimmedLocation,
+        faculty,
+        term: term.trim(),
+        message: trimmedMessage,
+        consent: agree,
+      };
+      formData.append("meta", JSON.stringify(meta));
+
+      const response = await fetch(`${backendBase}/api/upload`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Upload fehlgeschlagen");
+      }
+
+      const result = await response.json();
+      setStatus({
+        type: "success",
+        message: "Deine Postkarte wurde erfolgreich eingereicht!",
+        ref: result.ref,
+      });
+
+      // Reset form
+      setShowPreview(false);
+      setFullName("");
+      setEmail("");
+      setLocation("");
+      setFaculty("");
+      setTerm("");
+      setMessage("");
+      setImages([]);
+      setPdfFile(null);
+      setPdfUrl(null);
+      setAgree(false);
+      setEmailTouched(false);
+
+      // Refresh recent list
+      mutateRecent();
+
+    } catch (error: any) {
+      console.error("Submission error:", error);
+      setStatus({
+        type: "error",
+        message: error.message || "Ein Fehler ist aufgetreten. Bitte versuche es erneut.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   const [statusQuery, setStatusQuery] = useState("");
   const [statusLookup, setStatusLookup] = useState<
     | { state: "idle" }
@@ -74,7 +194,7 @@ export default function Page() {
   const [recentError, setRecentError] = useState<string | null>(null);
   const recentPreviewsRef = useRef<Record<string, string>>({});
 
-  useEffect(() => {
+  const loadRecentEntries = () => {
     if (!backendBase) {
       setRecentEntries([]);
       if (Object.keys(recentPreviewsRef.current).length > 0) {
@@ -82,7 +202,7 @@ export default function Page() {
         recentPreviewsRef.current = {};
         setRecentPreviews({});
       }
-      return;
+      return () => { }; // Return an empty cleanup function
     }
 
     const controller = new AbortController();
@@ -117,7 +237,16 @@ export default function Page() {
       });
 
     return () => controller.abort();
+  };
+
+  useEffect(() => {
+    const cleanup = loadRecentEntries();
+    return cleanup;
   }, [backendBase]);
+
+  const mutateRecent = () => {
+    loadRecentEntries();
+  };
 
   useEffect(() => {
     recentPreviewsRef.current = recentPreviews;
@@ -224,16 +353,7 @@ export default function Page() {
     });
   };
 
-  const termDisplay = useMemo(() => {
-    const start = formatDate(termStart);
-    const end = formatDate(termEnd);
-    if (start && end) {
-      return `${start} – ${end}`;
-    }
-    if (start) return start;
-    if (end) return end;
-    return "";
-  }, [termStart, termEnd]);
+  const termDisplay = term;
 
   const statusLabelMap: Record<"approved" | "received" | "deleted", string> = {
     approved: "Freigegeben",
@@ -265,10 +385,13 @@ export default function Page() {
 
   const exceedsTotalLimit = totalBytes > MAX_TOTAL_BYTES;
 
-  const formValid =
+  const canGenerate =
     fullName.trim().length > 0 &&
     emailValid &&
-    agree &&
+    agree;
+
+  const formValid =
+    canGenerate &&
     pdfFile !== null;
 
   const handleMessageChange = (value: string) => {
@@ -320,113 +443,7 @@ export default function Page() {
     message: message.trim() || undefined,
   });
 
-  const handleGeneratePdf = async () => {
-    if (!fullName.trim()) {
-      setStatus({ type: "error", message: "Bitte zuerst den Namen ausfüllen." });
-      return;
-    }
-    setPdfGenerating(true);
-    setStatus({ type: "idle", message: "" });
-    try {
-      const file = await createPostcardPdf(buildPdfPayload());
-      if (file.size > MAX_PDF_BYTES) {
-        setStatus({ type: "error", message: "PDF darf maximal 10 MB groß sein." });
-        setPdfGenerating(false);
-        return;
-      }
-      if (pdfUrl) {
-        URL.revokeObjectURL(pdfUrl);
-      }
-      const objectUrl = URL.createObjectURL(file);
-      setPdfFile(file);
-      setPdfUrl(objectUrl);
-      setStatus({ type: "success", message: "PDF wurde erfolgreich erzeugt." });
-    } catch (error) {
-      console.error(error);
-      setStatus({ type: "error", message: "PDF konnte nicht erzeugt werden." });
-    } finally {
-      setPdfGenerating(false);
-    }
-  };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!backendBase) {
-      setStatus({ type: "error", message: "Backend-URL ist nicht konfiguriert." });
-      return;
-    }
-
-    if (!pdfFile) {
-      setStatus({ type: "error", message: "Bitte erzeugen Sie zuerst die Postkarte als PDF." });
-      return;
-    }
-
-    if (pdfFile.size > MAX_PDF_BYTES) {
-      setStatus({ type: "error", message: "PDF darf maximal 10 MB groß sein." });
-      return;
-    }
-
-    if (!emailValid) {
-      setStatus({ type: "error", message: "Bitte eine gültige E-Mail-Adresse angeben." });
-      return;
-    }
-
-    if (exceedsTotalLimit) {
-      setStatus({ type: "error", message: "Gesamtgröße überschreitet 30 MB." });
-      return;
-    }
-
-    setIsSubmitting(true);
-    setStatus({ type: "idle", message: "" });
-
-    try {
-      const formData = new FormData();
-      formData.append("fullName", fullName.trim());
-      formData.append("email", email.trim());
-      if (faculty) {
-        formData.append("faculty", faculty);
-      }
-      formData.append("role", "Outgoing");
-      if (location.trim()) {
-        formData.append("location", location.trim());
-      }
-      if (termDisplay) {
-        formData.append("term", termDisplay);
-      }
-      if (message.trim()) {
-        formData.append("message", message.trim());
-      }
-      formData.append("agree", agree ? "true" : "false");
-      formData.append("postcard", pdfFile, pdfFile.name);
-      images.forEach((item, index) => {
-        formData.append("images", item.file, item.file.name || `bild_${index + 1}.jpg`);
-      });
-
-      const response = await fetch(`${backendBase}/api/upload`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null);
-        const serverMessage = payload?.message || "Upload fehlgeschlagen.";
-        setStatus({ type: "error", message: serverMessage });
-        return;
-      }
-
-      const payload = (await response.json()) as { ok: boolean; ref: string };
-      setStatus({
-        type: "success",
-        message: "Postkarte erfolgreich eingereicht!",
-        ref: payload.ref,
-      });
-    } catch (error) {
-      console.error(error);
-      setStatus({ type: "error", message: "Upload fehlgeschlagen. Bitte erneut versuchen." });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleStatusLookup = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -475,493 +492,423 @@ export default function Page() {
     }
   };
 
-  const statusClass = useMemo(() => {
-    if (status.type === "error") return `${styles.status} ${styles.statusError}`;
-    if (status.type === "success") return `${styles.status} ${styles.statusSuccess}`;
-    return styles.status;
-  }, [status.type]);
+
 
   return (
-    <main className={styles.shell}>
-      <div className={styles.brandBar}>
-        <div className={styles.brandMark}>
-          <span className={styles.brandMarkAccent}>Stu</span>Ra HTW Dresden
-        </div>
-        <span className={styles.brandTagline}>Programm Internationales · Digitale Postkarte</span>
-      </div>
-
-      <header className={styles.hero}>
-        <span className={styles.heroBadge}>StuRa HTW Dresden</span>
-        <h1 className={styles.heroTitle}>Digitale Postkarte – Erstellen &amp; Einreichen</h1>
-        <p className={styles.heroLead}>
-          Outgoing-Studierende gestalten eine digitale Postkarte, erzeugen das fertige PDF im A4-Querformat
-          und reichen die Datei gemeinsam mit optionalen Bildern beim StuRa der HTW Dresden ein.
-        </p>
-        <ul className={styles.heroFacts}>
-          <li>Clientseitige PDF-Erzeugung</li>
-          <li>Upload inkl. bis zu 5 Zusatzbildern</li>
-          <li>Direkter Abgleich mit den Admin-Tools</li>
-        </ul>
-        <div className={styles.heroCtaRow}>
-          <button className={styles.heroCtaButton} onClick={() => document.getElementById("postkarte-form")?.scrollIntoView({ behavior: "smooth" })}>
-            Formular öffnen
-          </button>
-          <span className={styles.heroCtaNote}>Benötigte Zeit: ca. 5 Minuten</span>
+    <div className={styles.shell}>
+      {/* Header */}
+      <header className={styles.header}>
+        <div className={styles.headerContainer}>
+          <img
+            src="/postkarte-assets/StuRa Logo_Digitale Postkarte 2025.svg"
+            alt="HTW Dresden"
+            className={styles.headerLogo}
+          />
+          <div className={styles.headerTitle}>Digitale Postkarte</div>
         </div>
       </header>
 
-      <div className={styles.contentGrid}>
-        <section className={`${styles.panel} ${styles.formPanel}`}>
-          <form id="postkarte-form" onSubmit={handleSubmit} noValidate>
-            <div className={styles.fieldGroup}>
-              <div>
-                <h2 className={styles.sectionTitle}>Persönliche Angaben</h2>
-                <label className={styles.label} htmlFor="fullName">
-                  Voller Name*
-                </label>
-                <input
-                  id="fullName"
-                  name="fullName"
-                  className={styles.input}
-                  required
-                  value={fullName}
-                  onChange={(event) => setFullName(event.target.value)}
-                  autoComplete="name"
-                />
-              </div>
+      {/* Main Content */}
+      <main className={styles.main}>
+        {/* Hero */}
+        <div className={styles.hero}>
+          <div className={styles.heroContainer}>
+            <h1 className={styles.heroTitle}>Digitale Postkarte</h1>
+            <p className={styles.heroLead}>
+              Versende digitale Grüße aus deinem Auslandssemester – im offiziellen HTW-Design.
+            </p>
+          </div>
+        </div>
 
-              <div>
-                <label className={styles.label} htmlFor="email">
-                  E-Mail*
+        <div className={styles.recentPanel} aria-live="polite">
+          <div>
+            <h2 className={styles.sectionTitle}>Gerade eingereichte Postkarten</h2>
+            <p className={styles.recentLead}>
+              Lass dich von den neuesten Einsendungen inspirieren. Jede Karte zeigt, wie das finale Layout wirkt.
+            </p>
+          </div>
+          {recentError && <p className={styles.recentError}>{recentError}</p>}
+          {!recentError && recentEntries.length === 0 && (
+            <p className={styles.recentEmpty}>Noch keine Einreichungen – sei die erste Person, die ihre Postkarte teilt!</p>
+          )}
+          <div className={styles.recentGrid}>
+            {recentEntries.map((entry) => {
+              const previewUrl = backendBase
+                ? `${backendBase}/api/status/${encodeURIComponent(entry.ref)}/postcard`
+                : undefined;
+              const previewBlobUrl = recentPreviews[entry.ref];
+              return (
+                <article key={entry.ref} className={styles.recentCard}>
+                  <div className={styles.recentPreview}>
+                    {previewBlobUrl ? (
+                      <object
+                        className={styles.recentPreviewFrame}
+                        data={previewBlobUrl}
+                        type="application/pdf"
+                      >
+                        {previewUrl && (
+                          <a href={previewUrl} target="_blank" rel="noreferrer">
+                            Postkarte öffnen
+                          </a>
+                        )}
+                      </object>
+                    ) : (
+                      <div className={styles.recentPreviewFallback}>
+                        <span>
+                          {entry.postcardAvailable
+                            ? "Vorschau wird geladen…"
+                            : "Vorschau nicht verfügbar"}
+                        </span>
+                        {previewUrl && (
+                          <a href={previewUrl} target="_blank" rel="noreferrer">
+                            Postkarte öffnen
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className={styles.recentDetails}>
+                    <p className={styles.recentLocation}>
+                      {entry.location || "Ort/Uni nicht angegeben"}
+                    </p>
+                    <p className={styles.recentDate}>
+                      Eingereicht am {formatDateTimeShort(entry.receivedAt)}
+                    </p>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className={styles.contentGrid}>
+          {/* Form Panel */}
+          <div className={styles.formPanel}>
+            <h2 className={styles.sectionTitle}>Karte erstellen</h2>
+
+            <form onSubmit={handleGenerate} className={styles.form}>
+              <div className={styles.fieldGroup}>
+                <label htmlFor="image" className={styles.label}>
+                  Dein Foto hochladen
                 </label>
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  className={styles.input}
-                  required
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  onBlur={() => setEmailTouched(true)}
-                  autoComplete="email"
-                  aria-invalid={emailTouched && !emailValid}
+                  type="file"
+                  id="image"
+                  accept="image/*"
+                  onChange={(e) => handleImageSelection(e.target.files)}
+                  className={styles.fileInput}
                 />
-                {emailTouched && !emailValid && (
-                  <p className={styles.counter} style={{ textAlign: "left", color: "#b91c1c" }}>
-                    Bitte eine gültige E-Mail-Adresse angeben.
-                  </p>
+                {images.length > 0 && (
+                  <div style={{ marginTop: "0.5rem", fontSize: "0.9rem", color: "#475569" }}>
+                    Ausgewählt: {images[0].file.name}
+                  </div>
                 )}
               </div>
 
-              <div>
-                <label className={styles.label} htmlFor="faculty">
-                  Fakultät
-                </label>
-                <select
-                  id="faculty"
-                  name="faculty"
-                  className={styles.select}
-                  value={faculty}
-                  onChange={(event) => setFaculty(event.target.value)}
-                >
-                  <option value="">Bitte auswählen</option>
-                  {FACULTIES.map((fac) => (
-                    <option key={fac} value={fac}>
-                      {fac}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className={styles.label} htmlFor="location">
-                  Ort/Uni
+              <div className={styles.fieldGroup}>
+                <label htmlFor="fullName" className={styles.label}>
+                  Dein Name
                 </label>
                 <input
-                  id="location"
-                  name="location"
+                  type="text"
+                  id="fullName"
+                  name="fullName"
+                  placeholder="Vorname Nachname"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                   className={styles.input}
-                  value={location}
-                  onChange={(event) => setLocation(event.target.value)}
+                  required
                 />
               </div>
 
-              <div>
-                <label className={styles.label} htmlFor="term-start">
-                  Zeitraum
+              <div className={styles.fieldGroup}>
+                <label htmlFor="location" className={styles.label}>
+                  Ort / Land
                 </label>
+                <input
+                  type="text"
+                  id="location"
+                  name="location"
+                  placeholder="z.B. Paris, Frankreich"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className={styles.input}
+                />
+              </div>
+
+              <div className={styles.fieldGroup}>
                 <div className={styles.dateInputs}>
-                  <input
-                    id="term-start"
-                    name="termStart"
-                    type="date"
-                    className={styles.input}
-                    value={termStart}
-                    onChange={(event) => setTermStart(event.target.value)}
-                    aria-label="Zeitraum von"
-                  />
-                  <input
-                    id="term-end"
-                    name="termEnd"
-                    type="date"
-                    className={styles.input}
-                    value={termEnd}
-                    onChange={(event) => setTermEnd(event.target.value)}
-                    aria-label="Zeitraum bis"
-                  />
+                  <div>
+                    <label htmlFor="faculty" className={styles.label}>
+                      Fakultät
+                    </label>
+                    <select
+                      id="faculty"
+                      name="faculty"
+                      value={faculty}
+                      onChange={(e) => setFaculty(e.target.value)}
+                      className={styles.select}
+                    >
+                      <option value="">Bitte wählen...</option>
+                      {FACULTIES.map((fac) => (
+                        <option key={fac} value={fac}>
+                          {fac}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="term" className={styles.label}>
+                      Zeitraum
+                    </label>
+                    <select
+                      id="term"
+                      name="term"
+                      value={term}
+                      onChange={(e) => setTerm(e.target.value)}
+                      className={styles.select}
+                    >
+                      <option value="">Bitte wählen...</option>
+                      <option value="WiSe 2024/25">WiSe 2024/25</option>
+                      <option value="SoSe 2025">SoSe 2025</option>
+                      <option value="WiSe 2025/26">WiSe 2025/26</option>
+                    </select>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className={styles.fieldGroup}>
-              <div>
-                <h2 className={styles.sectionTitle}>Kurztext</h2>
-                <label className={styles.label} htmlFor="message">
-                  Kurztext (max. 1000 Zeichen)
+              <div className={styles.fieldGroup}>
+                <label htmlFor="message" className={styles.label}>
+                  Deine Nachricht
                 </label>
                 <textarea
                   id="message"
                   name="message"
-                  className={styles.textarea}
-                  maxLength={MAX_MESSAGE_LENGTH}
+                  placeholder="Schreibe hier deinen Text..."
+                  maxLength={450}
                   value={message}
-                  onChange={(event) => handleMessageChange(event.target.value)}
-                  aria-describedby="message-counter"
+                  onChange={(e) => setMessage(e.target.value)}
+                  className={styles.textarea}
                 />
-                <div id="message-counter" className={styles.counter} aria-live="polite">
-                  {charCount}/{MAX_MESSAGE_LENGTH}
+                <div className={styles.counter}>
+                  {message.length} / 450 Zeichen
                 </div>
               </div>
-            </div>
 
-            <div className={styles.fieldGroup}>
-              <div>
-                <h2 className={styles.sectionTitle}>Uploads</h2>
-                <p className={styles.heroLead} style={{ color: "#475569", fontSize: "0.98rem" }}>
-                  Die erzeugte Postkarte (PDF, max. 10&nbsp;MB) ist Pflicht. Optional kannst du bis zu fünf zusätzliche
-                  Bilder (je max. 8&nbsp;MB) hinzufügen.
-                </p>
+              <div className={styles.fieldGroup}>
+                <label htmlFor="email" className={styles.label}>
+                  Deine E-Mail-Adresse (für Status-Updates)
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onBlur={() => setEmailTouched(true)}
+                  className={styles.input}
+                  style={emailTouched && !emailValid ? { borderColor: "#EF4444" } : {}}
+                  required
+                />
+                {emailTouched && !emailValid && (
+                  <p style={{ color: "#EF4444", fontSize: "0.85rem", marginTop: "0.25rem" }}>
+                    Bitte gib eine gültige E-Mail-Adresse ein.
+                  </p>
+                )}
+              </div>
+
+              <div className={styles.checkboxRow}>
+                <input
+                  type="checkbox"
+                  id="consent"
+                  checked={agree}
+                  onChange={(e) => setAgree(e.target.checked)}
+                  required
+                />
+                <label htmlFor="consent" style={{ fontSize: "0.9rem", lineHeight: "1.4" }}>
+                  Ich stimme zu, dass meine Daten verarbeitet und die Postkarte veröffentlicht wird.
+                  <br />
+                  <a href="https://www.htw-dresden.de/datenschutz" target="_blank" className={styles.privacyLink}>
+                    Datenschutzerklärung lesen
+                  </a>
+                </label>
               </div>
 
               <div className={styles.buttonRow}>
                 <button
-                  type="button"
-                  className={styles.secondaryButton}
-                  onClick={handleGeneratePdf}
-                  disabled={pdfGenerating}
+                  type="submit"
+                  className={styles.primaryButton}
+                  disabled={!canGenerate}
                 >
-                  {pdfGenerating ? "Postkarte wird erzeugt…" : "Postkarte erzeugen (PDF)"}
+                  Postkarte erzeugen (PDF)
                 </button>
-                {pdfUrl && (
-                  <a className={styles.secondaryButton} href={pdfUrl} download>
-                    PDF herunterladen
-                  </a>
-                )}
               </div>
+            </form>
+          </div>
+        </div>
 
-              <label className={styles.label} htmlFor="images">
-                Zusatzbilder (optional)
-              </label>
-              <input
-                id="images"
-                name="images"
-                type="file"
-                multiple
-                accept="image/*"
-                className={styles.fileInput}
-                onChange={(event) => handleImageSelection(event.target.files)}
-              />
-              {images.length > 0 && (
-                <div className={styles.fileList}>
-                  {images.map((item) => (
-                    <div key={item.id} className={styles.fileItem}>
-                      <span>
-                        {item.file.name} ({(item.file.size / (1024 * 1024)).toFixed(1)} MB)
-                      </span>
-                      <button type="button" onClick={() => removeImage(item.id)}>
-                        Entfernen
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+        {/* Preview Section - Only visible after generation */}
+        {showPreview && (
+          <div id="preview-section" className={styles.previewPanel} aria-live="polite">
+            <h2 className={styles.sectionTitle}>Vorschau & Einreichen</h2>
+            <div className={styles.previewSurface}>
+              <div className={styles.livePostcard}>
+                {/* Pine Branches Overlay (Always on top) */}
+                <PineBranches
+                  src="/postkarte-assets/Tannenzweige_Digitale Postkarte 2025.svg"
+                  className={styles.postcardPine}
+                />
 
-              <ul className={styles.summaryList}>
-                <li>
-                  <strong>Gesamtgröße:</strong> {totalSizeDisplay} (max. 30 MB)
-                </li>
-                {exceedsTotalLimit && <li style={{ color: "#b91c1c" }}>Gesamtgröße überschritten!</li>}
-                {pdfFile && (
-                  <li>
-                    <strong>PDF:</strong> {pdfFile.name} ({(pdfFile.size / (1024 * 1024)).toFixed(1)} MB)
-                  </li>
-                )}
-              </ul>
-            </div>
+                <div className={styles.postcardContainer}>
+                  {/* Left Column (White) */}
+                  <div className={styles.postcardLeftCol}>
+                    <img
+                      src="/postkarte-assets/StuRa Logo_Digitale Postkarte 2025.svg"
+                      alt="StuRa HTW Dresden"
+                      className={styles.postcardLogo}
+                    />
 
-            <div className={styles.fieldGroup}>
-              <div>
-                <h2 className={styles.sectionTitle}>Einwilligung</h2>
-                <div className={styles.checkboxRow}>
-                  <input
-                    id="agree"
-                    name="agree"
-                    type="checkbox"
-                    required
-                    checked={agree}
-                    onChange={(event) => setAgree(event.target.checked)}
-                  />
-                  <label htmlFor="agree">
-                    Ich bin einverstanden, dass meine Postkarte und Bilder für HTW-Kommunikation (Web, Social Media,
-                    Print) verwendet werden. Ich habe die{" "}
-                    <Link className={styles.privacyLink} href="/datenschutzhinweise" target="_blank" rel="noreferrer">
-                      Datenschutzhinweise
-                    </Link>{" "}
-                    gelesen.
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div className={styles.buttonRow}>
-              <button
-                type="submit"
-                className={styles.primaryButton}
-                disabled={!formValid || isSubmitting || exceedsTotalLimit}
-              >
-                {isSubmitting ? "Wird übermittelt…" : "Jetzt einreichen"}
-              </button>
-            </div>
-
-            {status.type !== "idle" && (
-              <div
-                ref={statusRef}
-                className={statusClass}
-                role="status"
-                tabIndex={-1}
-                aria-live="assertive"
-              >
-                <p>{status.message}</p>
-                {status.type === "success" && status.ref && (
-                  <p>Referenz-ID: {status.ref}</p>
-                )}
-              </div>
-            )}
-          </form>
-        </section>
-
-        <aside className={`${styles.panel} ${styles.previewPanel}`} aria-live="polite">
-          <div className={styles.previewSurface}>
-            <div className={styles.livePostcard}>
-              {/* Pine Branches Overlay (Always on top) */}
-              <PineBranches
-                src="/postkarte-assets/Tannenzweige_Digitale Postkarte 2025.svg"
-                className={styles.postcardPine}
-              />
-
-              <div className={styles.postcardContainer}>
-                {/* Left Column (White) */}
-                <div className={styles.postcardLeftCol}>
-                  <img
-                    src="/postkarte-assets/StuRa Logo_Digitale Postkarte 2025.svg"
-                    alt="StuRa HTW Dresden"
-                    className={styles.postcardLogo}
-                  />
-
-                  <div className={styles.postcardTextContent}>
-                    <div className={styles.postcardHeading}>Liebe Kommiliton:innen</div>
-                    <div className={styles.postcardMessage}>
-                      {trimmedMessage || "Hier steht dein Kurztext."}
-                    </div>
-                    {/* Signature / Meta Info */}
-                    <div className={styles.postcardSignature}>
-                      <div className={styles.postcardMeta}>
-                        {trimmedLocation && <span>{trimmedLocation}</span>}
-                        {trimmedLocation && (faculty || termDisplay) && <span> • </span>}
-                        {faculty && <span>{faculty}</span>}
-                        {faculty && termDisplay && <span> • </span>}
-                        {termDisplay && <span>{termDisplay}</span>}
+                    <div className={styles.postcardTextContent}>
+                      <div className={styles.postcardHeading}>Liebe Kommiliton:innen</div>
+                      <div className={styles.postcardMessage}>
+                        {trimmedMessage || "Hier steht dein Kurztext."}
+                      </div>
+                      {/* Signature / Meta Info */}
+                      <div className={styles.postcardSignature}>
+                        <div className={styles.postcardMeta}>
+                          {trimmedLocation && <span>{trimmedLocation}</span>}
+                          {trimmedLocation && (faculty || termDisplay) && <span> • </span>}
+                          {faculty && <span>{faculty}</span>}
+                          {faculty && termDisplay && <span> • </span>}
+                          {termDisplay && <span>{termDisplay}</span>}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Right Column (Orange) */}
-                <div className={styles.postcardRightCol}>
-                  <div className={styles.postcardAddress}>
-                    <span>HTW Dresden</span>
-                    <span>Stabstelle Internationales</span>
-                    <span>Friedrich-List Platz 1</span>
-                    <span>01069 Dresden</span>
+                  {/* Right Column (Orange) */}
+                  <div className={styles.postcardRightCol}>
+                    <div className={styles.postcardAddress}>
+                      <span>HTW Dresden</span>
+                      <span>Stabstelle Internationales</span>
+                      <span>Friedrich-List Platz 1</span>
+                      <span>01069 Dresden</span>
+                    </div>
                   </div>
                 </div>
+
+                {/* Stamp Overlay (Full Page) */}
+                <div className={styles.postcardStampArea}>
+                  <img
+                    src="/postkarte-assets/Poststempel_Digitale Postkarte 2025.svg"
+                    alt=""
+                    className={styles.postcardStamp}
+                  />
+                </div>
               </div>
 
-              {/* Stamp Overlay (Full Page) */}
-              <div className={styles.postcardStampArea}>
-                <img
-                  src="/postkarte-assets/Poststempel_Digitale Postkarte 2025.svg"
-                  alt=""
-                  className={styles.postcardStamp}
-                />
+              <div className={styles.buttonRow} style={{ marginTop: "2rem", justifyContent: "center" }}>
+                <button
+                  type="button"
+                  onClick={handleFinalSubmit}
+                  className={styles.primaryButton}
+                  disabled={isSubmitting}
+                  style={{ backgroundColor: "#16a34a" }} // Green for submit
+                >
+                  {isSubmitting ? "Wird eingereicht..." : "Postkarte einreichen"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(false)}
+                  className={styles.secondaryButton}
+                  style={{ marginLeft: "1rem", padding: "1.2rem 2rem", borderRadius: "2px", border: "1px solid #ccc", background: "white", cursor: "pointer", fontWeight: "600", textTransform: "uppercase" }}
+                >
+                  Bearbeiten
+                </button>
               </div>
             </div>
+          </div>
+        )}
 
-            <div>
-              <h2 className={styles.sectionTitle}>PDF-Vorschau</h2>
-              {pdfUrl ? (
-                <object className={styles.pdfPreview} data={pdfUrl} type="application/pdf">
-                  <p>Dein Browser kann die Vorschau nicht anzeigen. Bitte nutze den Download.</p>
-                </object>
-              ) : (
-                <div
-                  className={styles.pdfPreview}
-                  style={{ display: "grid", placeItems: "center", color: "#6b7280" }}
-                >
-                  <span>PDF wird nach der Erzeugung angezeigt.</span>
-                </div>
+        {status.type !== "idle" && (
+          <div className={`${styles.status} ${status.type === "error" ? styles.statusError : styles.statusSuccess}`}>
+            <p>{status.message}</p>
+            {status.type === "success" && status.ref && (
+              <p>Referenz-ID: {status.ref}</p>
+            )}
+          </div>
+        )}
+
+
+
+
+
+        <div className={styles.statusPanel}>
+          <div>
+            <h2 className={styles.sectionTitle}>Status mit Referenz-ID prüfen</h2>
+            <p className={styles.statusDescription}>
+              Nach dem Einreichen erhältst du eine Referenz-ID. Trage sie hier ein, um den aktuellen Bearbeitungsstand
+              deiner Postkarte nachzuverfolgen.
+            </p>
+          </div>
+          <form className={styles.statusForm} onSubmit={handleStatusLookup}>
+            <div className={styles.statusInputRow}>
+              <input
+                className={styles.statusInput}
+                value={statusQuery}
+                onChange={(event) => setStatusQuery(event.target.value)}
+                placeholder="Referenz-ID (z. B. AB12CD34)"
+                aria-label="Referenz-ID"
+              />
+              <button className={styles.statusButton} type="submit">
+                Status abrufen
+              </button>
+            </div>
+            <div className={styles.statusResult} aria-live="polite">
+              {statusLookup.state === "idle" && (
+                <span>Gib deine Referenz-ID ein und bestätige.</span>
+              )}
+              {statusLookup.state === "loading" && <span>Status wird geladen…</span>}
+              {statusLookup.state === "error" && <span className={styles.statusResultError}>{statusLookup.message}</span>}
+              {statusLookup.state === "success" && (
+                <ul>
+                  <li>
+                    <strong>Status:</strong> {statusLabelMap[statusLookup.payload.status]}
+                  </li>
+                  <li>
+                    <strong>Eingegangen:</strong> {formatDateTime(statusLookup.payload.receivedAt)}
+                  </li>
+                  {statusLookup.payload.approvedAt && (
+                    <li>
+                      <strong>Freigegeben:</strong> {formatDateTime(statusLookup.payload.approvedAt)}
+                    </li>
+                  )}
+                  {statusLookup.payload.deletedAt && (
+                    <li>
+                      <strong>Soft Delete:</strong> {formatDateTime(statusLookup.payload.deletedAt)}
+                    </li>
+                  )}
+                </ul>
               )}
             </div>
-
-          </div>
-        </aside>
-      </div>
-
-      <section className={styles.infoGrid}>
-        <article className={styles.infoCard}>
-          <div className={styles.infoNumber}>1</div>
-          <h3>Postkarte gestalten</h3>
-          <p>Fülle die Felder aus und nutze die Live-Vorschau, um Layout und Text abzustimmen.</p>
-        </article>
-        <article className={styles.infoCard}>
-          <div className={styles.infoNumber}>2</div>
-          <h3>PDF erzeugen</h3>
-          <p>Klicke auf „Postkarte erzeugen (PDF)“ – das PDF entspricht dem HTW-Layout.</p>
-        </article>
-        <article className={styles.infoCard}>
-          <div className={styles.infoNumber}>3</div>
-          <h3>Einreichen &amp; verfolgen</h3>
-          <p>Nach dem Upload erhältst du eine Referenz-ID. Die StuRa-Admins sehen den Eintrag sofort.</p>
-        </article>
-      </section>
-
-      <section className={`${styles.panel} ${styles.recentPanel}`} aria-live="polite">
-        <div>
-          <h2 className={styles.sectionTitle}>Gerade eingereichte Postkarten</h2>
-          <p className={styles.recentLead}>
-            Lass dich von den neuesten Einsendungen inspirieren. Jede Karte zeigt, wie das finale Layout wirkt.
-          </p>
+          </form>
         </div>
-        {recentError && <p className={styles.recentError}>{recentError}</p>}
-        {!recentError && recentEntries.length === 0 && (
-          <p className={styles.recentEmpty}>Noch keine Einreichungen – sei die erste Person, die ihre Postkarte teilt!</p>
-        )}
-        <div className={styles.recentGrid}>
-          {recentEntries.map((entry) => {
-            const previewUrl = backendBase
-              ? `${backendBase}/api/status/${encodeURIComponent(entry.ref)}/postcard`
-              : undefined;
-            const previewBlobUrl = recentPreviews[entry.ref];
-            return (
-              <article key={entry.ref} className={styles.recentCard}>
-                <div className={styles.recentPreview}>
-                  {previewBlobUrl ? (
-                    <object
-                      className={styles.recentPreviewFrame}
-                      data={previewBlobUrl}
-                      type="application/pdf"
-                    >
-                      {previewUrl && (
-                        <a href={previewUrl} target="_blank" rel="noreferrer">
-                          Postkarte öffnen
-                        </a>
-                      )}
-                    </object>
-                  ) : (
-                    <div className={styles.recentPreviewFallback}>
-                      <span>
-                        {entry.postcardAvailable
-                          ? "Vorschau wird geladen…"
-                          : "Vorschau nicht verfügbar"}
-                      </span>
-                      {previewUrl && (
-                        <a href={previewUrl} target="_blank" rel="noreferrer">
-                          Postkarte öffnen
-                        </a>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div className={styles.recentDetails}>
-                  <p className={styles.recentLocation}>
-                    {entry.location || "Ort/Uni nicht angegeben"}
-                  </p>
-                  <p className={styles.recentDate}>
-                    Eingereicht am {formatDateTimeShort(entry.receivedAt)}
-                  </p>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
+      </main >
 
-      <section className={`${styles.panel} ${styles.statusPanel}`}>
-        <div>
-          <h2 className={styles.sectionTitle}>Status mit Referenz-ID prüfen</h2>
-          <p className={styles.statusDescription}>
-            Nach dem Einreichen erhältst du eine Referenz-ID. Trage sie hier ein, um den aktuellen Bearbeitungsstand
-            deiner Postkarte nachzuverfolgen.
-          </p>
+      <footer className={styles.footer}>
+        <div className={styles.footerContainer}>
+          <div className={styles.footerLinks}>
+            <a href="https://www.htw-dresden.de/datenschutz" target="_blank" className={styles.footerLink}>
+              Datenschutz
+            </a>
+            <a href="https://www.htw-dresden.de/impressum" target="_blank" className={styles.footerLink}>
+              Impressum
+            </a>
+          </div>
+          <div>&copy; {new Date().getFullYear()} StuRa HTW Dresden</div>
         </div>
-        <form className={styles.statusForm} onSubmit={handleStatusLookup}>
-          <div className={styles.statusInputRow}>
-            <input
-              className={styles.statusInput}
-              value={statusQuery}
-              onChange={(event) => setStatusQuery(event.target.value)}
-              placeholder="Referenz-ID (z. B. AB12CD34)"
-              aria-label="Referenz-ID"
-            />
-            <button className={styles.statusButton} type="submit">
-              Status abrufen
-            </button>
-          </div>
-          <div className={styles.statusResult} aria-live="polite">
-            {statusLookup.state === "idle" && (
-              <span>Gib deine Referenz-ID ein und bestätige.</span>
-            )}
-            {statusLookup.state === "loading" && <span>Status wird geladen…</span>}
-            {statusLookup.state === "error" && <span className={styles.statusResultError}>{statusLookup.message}</span>}
-            {statusLookup.state === "success" && (
-              <ul>
-                <li>
-                  <strong>Status:</strong> {statusLabelMap[statusLookup.payload.status]}
-                </li>
-                <li>
-                  <strong>Eingegangen:</strong> {formatDateTime(statusLookup.payload.receivedAt)}
-                </li>
-                {statusLookup.payload.approvedAt && (
-                  <li>
-                    <strong>Freigegeben:</strong> {formatDateTime(statusLookup.payload.approvedAt)}
-                  </li>
-                )}
-                {statusLookup.payload.deletedAt && (
-                  <li>
-                    <strong>Soft Delete:</strong> {formatDateTime(statusLookup.payload.deletedAt)}
-                  </li>
-                )}
-              </ul>
-            )}
-          </div>
-        </form>
-      </section>
-
-      <section className={styles.supportStrip}>
-        <strong>Kontakt StuRa HTW Dresden</strong>
-        <span>Stabstelle Internationales · Friedrich-List Platz 1 · 01069 Dresden</span>
-        <span>Fragen? Schreib uns an internationale@stura.htw-dresden.de</span>
-      </section>
-    </main>
+      </footer>
+    </div >
   );
 }
