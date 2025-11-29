@@ -142,6 +142,15 @@
   margin-bottom: 2rem;
 }
 
+.dateInputs {
+  display: flex;
+  gap: 2rem;
+}
+
+.dateInputs>div {
+  flex: 1;
+}
+
 .label {
   display: block;
   font-weight: 600;

@@ -711,6 +711,9 @@ export default function Page() {
                           <option value="WiSe 2024/25">WiSe 2024/25</option>
                           <option value="SoSe 2025">SoSe 2025</option>
                           <option value="WiSe 2025/26">WiSe 2025/26</option>
+                          <option value="SoSe 2026">SoSe 2026</option>
+                          <option value="WiSe 2026/27">WiSe 2026/27</option>
+                          <option value="SoSe 2027">SoSe 2027</option>
                         </select>
                       </div>
                     </div>
