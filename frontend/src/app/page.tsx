@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./page.module.css";
 import { createPostcardPdf, type PostcardFormData } from "@/lib/pdf";
+import PineBranches from "../components/PineBranches";
 
 const FACULTIES = [
   "Informatik/Mathematik",
@@ -53,14 +55,14 @@ export default function Page() {
     | { state: "loading" }
     | { state: "error"; message: string }
     | {
-        state: "success";
-        payload: {
-          status: "approved" | "received" | "deleted";
-          receivedAt: string;
-          approvedAt: string | null;
-          deletedAt: string | null;
-        };
-      }
+      state: "success";
+      payload: {
+        status: "approved" | "received" | "deleted";
+        receivedAt: string;
+        approvedAt: string | null;
+        deletedAt: string | null;
+      };
+    }
   >({ state: "idle" });
   const [recentEntries, setRecentEntries] = useState<Array<{
     ref: string;
@@ -709,16 +711,16 @@ export default function Page() {
                     checked={agree}
                     onChange={(event) => setAgree(event.target.checked)}
                   />
-                <label htmlFor="agree">
-                  Ich bin einverstanden, dass meine Postkarte und Bilder für HTW-Kommunikation (Web, Social Media,
-                  Print) verwendet werden. Ich habe die{" "}
-                  <Link className={styles.privacyLink} href="/datenschutzhinweise" target="_blank" rel="noreferrer">
-                    Datenschutzhinweise
-                  </Link>{" "}
-                  gelesen.
-                </label>
+                  <label htmlFor="agree">
+                    Ich bin einverstanden, dass meine Postkarte und Bilder für HTW-Kommunikation (Web, Social Media,
+                    Print) verwendet werden. Ich habe die{" "}
+                    <Link className={styles.privacyLink} href="/datenschutzhinweise" target="_blank" rel="noreferrer">
+                      Datenschutzhinweise
+                    </Link>{" "}
+                    gelesen.
+                  </label>
+                </div>
               </div>
-            </div>
             </div>
 
             <div className={styles.buttonRow}>
@@ -751,39 +753,57 @@ export default function Page() {
         <aside className={`${styles.panel} ${styles.previewPanel}`} aria-live="polite">
           <div className={styles.previewSurface}>
             <div className={styles.livePostcard}>
-              <div className={styles.postcardLeft}>
-                <div className={styles.postcardLeftContent}>
-                  <div className={styles.postcardLogo}>
-                    <span>StuRa</span>
-                    <span>HTWD</span>
+              {/* Pine Branches Overlay (Always on top) */}
+              <PineBranches
+                src="/postkarte-assets/Tannenzweige_Digitale Postkarte 2025.svg"
+                className={styles.postcardPine}
+              />
+
+              <div className={styles.postcardContainer}>
+                {/* Left Column (White) */}
+                <div className={styles.postcardLeftCol}>
+                  <img
+                    src="/postkarte-assets/StuRa Logo_Digitale Postkarte 2025.svg"
+                    alt="StuRa HTW Dresden"
+                    className={styles.postcardLogo}
+                  />
+
+                  <div className={styles.postcardTextContent}>
+                    <div className={styles.postcardHeading}>Liebe Kommiliton:innen</div>
+                    <div className={styles.postcardMessage}>
+                      {trimmedMessage || "Hier steht dein Kurztext."}
+                    </div>
+                    {/* Signature / Meta Info */}
+                    <div className={styles.postcardSignature}>
+                      <div className={styles.postcardMeta}>
+                        {trimmedLocation && <span>{trimmedLocation}</span>}
+                        {trimmedLocation && (faculty || termDisplay) && <span> • </span>}
+                        {faculty && <span>{faculty}</span>}
+                        {faculty && termDisplay && <span> • </span>}
+                        {termDisplay && <span>{termDisplay}</span>}
+                      </div>
+                    </div>
                   </div>
-                  <div className={styles.postcardHeading}>Liebe Kommiliton:innen</div>
-                  <div className={styles.postcardGreeting}>
-                    Liebe Grüße aus {trimmedLocation || "…"}
-                  </div>
-                  <div className={styles.postcardMessage}>
-                    {trimmedMessage || "Hier steht dein Kurztext."}
-                  </div>
-                  <div className={styles.postcardSignature}>
-                    <strong>{trimmedName || "Deine Unterschrift"}</strong>
-                    {termDisplay && <span>{termDisplay}</span>}
-                    {faculty && <span>{faculty}</span>}
+                </div>
+
+                {/* Right Column (Orange) */}
+                <div className={styles.postcardRightCol}>
+                  <div className={styles.postcardAddress}>
+                    <span>HTW Dresden</span>
+                    <span>Stabstelle Internationales</span>
+                    <span>Friedrich-List Platz 1</span>
+                    <span>01069 Dresden</span>
                   </div>
                 </div>
               </div>
-              <div className={styles.postcardRight}>
-                <div className={styles.postcardStamp} aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                  <span />
-                </div>
-                <div className={styles.postcardAddress}>
-                  <span>HTW Dresden</span>
-                  <span>Stabstelle Internationales</span>
-                  <span>Friedrich-List Platz 1</span>
-                  <span>01069 Dresden</span>
-                </div>
+
+              {/* Stamp Overlay (Full Page) */}
+              <div className={styles.postcardStampArea}>
+                <img
+                  src="/postkarte-assets/Poststempel_Digitale Postkarte 2025.svg"
+                  alt=""
+                  className={styles.postcardStamp}
+                />
               </div>
             </div>
 
@@ -896,11 +916,11 @@ export default function Page() {
         </div>
         <form className={styles.statusForm} onSubmit={handleStatusLookup}>
           <div className={styles.statusInputRow}>
-              <input
-                className={styles.statusInput}
-                value={statusQuery}
-                onChange={(event) => setStatusQuery(event.target.value)}
-                placeholder="Referenz-ID (z. B. AB12CD34)"
+            <input
+              className={styles.statusInput}
+              value={statusQuery}
+              onChange={(event) => setStatusQuery(event.target.value)}
+              placeholder="Referenz-ID (z. B. AB12CD34)"
               aria-label="Referenz-ID"
             />
             <button className={styles.statusButton} type="submit">

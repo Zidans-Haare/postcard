@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
+
 .shell {
   min-height: 100vh;
   background: radial-gradient(circle at 20% 20%, rgba(15, 23, 42, 0.08), transparent 55%),
@@ -319,159 +321,162 @@
 .livePostcard {
   position: relative;
   width: 100%;
-  max-width: 640px;
+  max-width: 842px;
+  /* A4 aspect ratio width */
   margin: 0 auto;
   aspect-ratio: 842 / 595;
-  border-radius: 24px;
+  border-radius: 2px;
   overflow: hidden;
   background: #ffffff;
   color: #111827;
-  display: grid;
-  grid-template-columns: 70.3% 29.7%;
   box-shadow: 0 22px 48px -38px rgba(15, 23, 42, 0.28);
   border: 1px solid rgba(148, 163, 184, 0.22);
 }
 
-.postcardLeft {
+.postcardContainer {
+  display: grid;
+  grid-template-columns: 57.7% 42.3%;
+  height: 100%;
+}
+
+.postcardLeftCol {
+  background-color: #ffffff;
   position: relative;
-  padding: 8.5% 6% 9% 9.5%;
-  display: flex;
-  justify-content: center;
-  background: linear-gradient(180deg, rgba(236, 109, 19, 0.05) 0%, rgba(236, 109, 19, 0) 45%), #ffffff;
-}
-
-.postcardLeft::after {
-  content: "";
-  position: absolute;
-  left: 9.5%;
-  right: 6%;
-  bottom: 8%;
-  height: 4%;
-  background: linear-gradient(90deg, rgba(14, 116, 144, 0.1), rgba(14, 116, 144, 0.25), rgba(14, 116, 144, 0.1));
-  border-radius: 999px;
-  opacity: 0.75;
-}
-
-.postcardLeftContent {
-  width: 100%;
-  max-width: 420px;
+  padding: 30px 40px 40px 20px;
+  /* Top, Right, Bottom, Left */
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 1.4rem;
-  text-align: center;
+}
+
+.postcardRightCol {
+  background-color: #ec6d13;
+  /* Orange from reference */
+  position: relative;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  color: #ffffff;
+}
+
+.postcardPine {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  object-position: bottom;
+  pointer-events: none;
+  z-index: 10;
 }
 
 .postcardLogo {
+  width: 140px;
+  height: auto;
+  margin-bottom: 3rem;
+}
+
+.postcardTextContent {
+  flex-grow: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-weight: 700;
-  font-size: clamp(1.2rem, 1.1rem + 0.6vw, 1.8rem);
-  line-height: 1.1;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #0f172a;
-}
-
-.postcardLogo span:last-child {
-  color: #ec6d13;
+  text-align: center;
+  z-index: 20;
+  margin-top: 80px;
+  /* Space for the logo overlay */
+  /* Above pine branches */
 }
 
 .postcardHeading {
-  margin-top: 2.6rem;
-  font-size: clamp(1.45rem, 1.3rem + 0.8vw, 2rem);
-  font-weight: 600;
-  font-family: "Times New Roman", Times, Georgia, serif;
+  font-size: clamp(1.2rem, 1.1rem + 0.6vw, 1.6rem);
+  font-weight: 400;
+  font-family: "Open Sans", sans-serif;
+  color: #1f2937;
+  margin-bottom: 1rem;
 }
 
 .postcardGreeting {
   font-family: "Times New Roman", Times, Georgia, serif;
-  font-size: clamp(1.05rem, 0.95rem + 0.7vw, 1.4rem);
+  font-size: clamp(1.0rem, 0.9rem + 0.5vw, 1.3rem);
   font-weight: 600;
   color: #1f2937;
   letter-spacing: 0.015em;
-  text-align: center;
-  overflow-wrap: anywhere;
-  hyphens: auto;
+  margin-bottom: 1rem;
 }
 
 .postcardMessage {
   width: 100%;
-  font-family: "Times New Roman", Times, Georgia, serif;
-  font-size: clamp(0.92rem, 0.88rem + 0.35vw, 1.05rem);
-  line-height: 1.6;
+  font-family: "Open Sans", sans-serif;
+  font-size: clamp(0.9rem, 0.85rem + 0.3vw, 1.0rem);
+  line-height: 1.5;
   color: #374151;
   white-space: pre-wrap;
-  text-align: justify;
-  text-align-last: center;
   overflow-wrap: anywhere;
   hyphens: auto;
-  padding: 0 1.2rem;
+  flex-grow: 1;
+  margin-bottom: 2rem;
 }
 
 .postcardSignature {
   margin-top: auto;
-  font-family: "Times New Roman", Times, Georgia, serif;
-  display: grid;
-  gap: 0.3rem;
+  font-family: "Open Sans", sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
   color: #1f2937;
-  text-align: center;
+  margin-bottom: 4rem;
+  /* Space above pine branches */
 }
 
 .postcardSignature strong {
-  font-size: clamp(0.98rem, 0.92rem + 0.3vw, 1.18rem);
-  overflow-wrap: anywhere;
+  font-size: clamp(0.95rem, 0.9rem + 0.3vw, 1.1rem);
 }
 
 .postcardSignature span {
-  font-size: clamp(0.85rem, 0.8rem + 0.3vw, 0.98rem);
-  overflow-wrap: anywhere;
-  hyphens: auto;
+  font-size: clamp(0.8rem, 0.75rem + 0.3vw, 0.9rem);
+  color: #4b5563;
 }
 
-.postcardRight {
-  position: relative;
-  padding: 20% 9% 10% 9%;
-  background: #ec6d13;
-  color: #ffffff;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: 1.4rem;
+.postcardStampArea {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 15;
+  /* Below text, above background */
 }
 
 .postcardStamp {
-  position: absolute;
-  top: 13%;
-  right: 12%;
-  display: grid;
-  gap: 0.6rem;
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.postcardStamp span {
-  display: block;
-  border-top: 2px solid currentColor;
-  width: clamp(90px, 22vw, 130px);
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .postcardAddress {
   display: grid;
-  gap: 1.1rem;
-  font-weight: 600;
-  font-size: clamp(0.95rem, 0.9rem + 0.35vw, 1.15rem);
-  line-height: 1.25;
+  gap: 0.5rem;
+  font-family: "Open Sans", sans-serif;
+  font-weight: 400;
+  font-size: clamp(1.3rem, 1.2rem + 0.4vw, 1.5rem);
+  line-height: 1.4;
+  color: #ffffff;
+  margin-bottom: 280px;
 }
 
 .postcardAddress span {
   border-bottom: 1px solid rgba(255, 255, 255, 0.6);
-  padding-bottom: 0.35rem;
+  padding-bottom: 0.2rem;
 }
 
 .postcardAddress span:last-child {
   border-bottom: none;
 }
+
 
 .pdfPreview {
   width: 100%;
