@@ -364,7 +364,7 @@
   align-items: center;
   text-align: center;
   z-index: 20;
-  margin-top: 40px;
+  margin-top: 10px;
   /* Space for the logo overlay */
   /* Above pine branches */
   position: relative;
@@ -390,6 +390,10 @@
 
 .postcardMessage {
   width: 100%;
+  max-width: 75%;
+  /* Match PDF generation width factor */
+  margin: 0 auto 2rem auto;
+  /* Center horizontally */
   font-family: "Open Sans", sans-serif;
   font-size: clamp(0.9rem, 0.85rem + 0.3vw, 1.0rem);
   line-height: 1.5;
@@ -398,7 +402,6 @@
   overflow-wrap: anywhere;
   hyphens: auto;
   flex-grow: 1;
-  margin-bottom: 2rem;
 }
 
 .postcardSignature {
