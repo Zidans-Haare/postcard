@@ -1,7 +1,6 @@
 # Projekt Dokumentation: Postkarte
 
 **Stand:** 4. Dezember 2025
-**Erstellt von:** Gemini CLI Agent
 
 ## Übersicht
 Das Projekt "Postkarte" ist eine Webanwendung, die aus drei Hauptkomponenten besteht: Frontend, Backend und Admin-Panel. Alle Komponenten werden als Node.js-Anwendungen ausgeführt und durch Nginx als Reverse Proxy bereitgestellt.
