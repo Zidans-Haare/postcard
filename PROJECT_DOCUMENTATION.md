@@ -1,6 +1,6 @@
 # Projekt Dokumentation: Postkarte
 
-**Stand:** 4. Dezember 2025
+**Stand:** 8. Dezember 2025
 
 ## Übersicht
 Das Projekt "Postkarte" ist eine Webanwendung, die aus drei Hauptkomponenten besteht: Frontend, Backend und Admin-Panel. Alle Komponenten werden als Node.js-Anwendungen ausgeführt und durch Nginx als Reverse Proxy bereitgestellt.
@@ -73,9 +73,26 @@ Nginx fungiert als Reverse Proxy und liefert statische Dateien aus.
 *   `client_max_body_size`: 50M (für Uploads).
 *   SSL Zertifikate werden via Certbot verwaltet (LetsEncrypt).
 
-## Letzte Änderungen (4.12.2025)
+## Letzte Änderungen
+
+### 08.12.2025: Sicherheitsupdate (Next.js/React)
+Aufgrund einer kritischen Sicherheitswarnung (CVE-2025-55182, CVE-2025-66478) wurden alle Komponenten überprüft und aktualisiert.
+*   **Maßnahme:** Update von `next` auf Version `16.0.7` in `frontend`, `admin` und `backend`.
+*   **Status:** Alle drei Module verwenden nun die gepatchte Version `16.0.7`.
+*   **Neustart:** Alle PM2-Prozesse wurden neu gestartet, um die Änderungen wirksam zu machen.
+
+### 4.12.2025: Nginx Konfiguration
 Die Nginx-Konfiguration wurde aktualisiert, um Inkonsistenzen zu beheben:
 1.  Domain auf `post.htw.stura-dresden.de` vereinheitlicht.
 2.  CORS-Fix für die API hinzugefügt.
 3.  Fehlende Pfade für statische Assets (`/postkarte-assets`, `/vorlage.pdf`) ergänzt.
 4.  SSL-Konfiguration (Certbot) beibehalten.
+
+## Entwicklungstools
+
+### Snyk CLI
+Snyk wurde installiert, um Sicherheitsüberprüfungen durchzuführen.
+*   **Pfad:** `/root/bin/snyk`
+*   **Version:** 1.1301.0 (Stand: 4.12.2025)
+*   **Installation:** Manuell via Binary Download (wget).
+*   **Auth:** Noch ausstehend (benötigt User-Interaktion via Browser).
