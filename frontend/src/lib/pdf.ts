@@ -190,7 +190,7 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
 
   // 3. Text Content (Left Side)
   const leftPadding = 20;
-  const topPadding = 130; // Below Logo
+  const topPadding = 180; // Below Logo (Increased from 130)
   // Reduce content width to make text box narrower (approx 60% of available space)
   const availableWidth = width - rightColWidth - leftPadding - 40;
   const contentWidth = availableWidth * 0.72;
@@ -213,7 +213,7 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
     font: sansFont,
     color: rgb(0.1, 0.1, 0.1),
   });
-  cursorY -= 32;
+  cursorY -= 48; // Increased gap from 32
 
   // Message Body (Centered, Sans-Serif)
   const messageText = data.message || "Hier steht dein Kurztext.";
@@ -236,7 +236,7 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
 
   // Signature Area (Bottom Left, above Pine)
   // Pine branches take up bottom ~150px?
-  const footerY = 160;
+  const footerY = 200; // Moved up from 160 to avoid pine branches
 
   // Construct footer string: Location • Faculty • Term
   let footerParts: string[] = [];
