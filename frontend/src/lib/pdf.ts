@@ -3,8 +3,10 @@ import type { PDFFont } from "pdf-lib";
 
 export interface PostcardFormData {
   fullName: string;
+  email: string;
   faculty?: string;
   location?: string;
+  country?: string;
   term?: string;
   message?: string;
 }
@@ -112,6 +114,113 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
   const serifFont = await doc.embedFont(StandardFonts.TimesRoman);
   const serifBoldFont = await doc.embedFont(StandardFonts.TimesRomanBold);
   // const sansFont = await doc.embedFont(StandardFonts.HelveticaBold);
+
+  // 2. Right Side (Address Side)
+  // Draw vertical separator line
+  const separatorX = width / 2;
+  page.drawLine({
+    start: { x: separatorX, y: 40 },
+    end: { x: separatorX, y: height - 40 },
+    thickness: 1,
+    color: rgb(0.8, 0.8, 0.8),
+  });
+
+  // --- STAMP & POSTMARK ---
+  // Load stamp based on country
+  let stampBytes: ArrayBuffer | null = null;
+  if (data.country) {
+    try {
+      // Try PNG first (preferred format from requirements)
+      stampBytes = await loadImage(`/stamps/${data.country}.png`).catch(() => null);
+      if (!stampBytes) {
+        // Try SVG if PNG fails (though we asked for PNGs, good to have fallback if user provides SVGs)
+        // Note: SVG loading in browser context might need conversion. 
+        // For now, let's assume PNGs are provided as requested.
+        // If we really need SVG support here, we'd need to fetch it as text and use convertSvgToPng.
+        // But let's stick to the requirements document asking for PNGs.
+        console.warn(`Stamp for ${data.country} not found (checked .png).`);
+      }
+    } catch (e) {
+      console.error("Error loading stamp:", e);
+    }
+  }
+
+  const stampWidth = 60;
+  const stampHeight = 70; // Approximation, will adjust ratio
+  const stampX = width - stampWidth - 20;
+  const stampY = height - stampHeight - 20;
+
+  if (stampBytes) {
+    try {
+      const stampImage = await doc.embedPng(stampBytes);
+      // Maintain aspect ratio
+      const stampDims = stampImage.scaleToFit(stampWidth, stampHeight);
+
+      page.drawImage(stampImage, {
+        x: width - stampDims.width - 20, // Align right
+        y: height - stampDims.height - 20, // Align top
+        width: stampDims.width,
+        height: stampDims.height,
+      });
+    } catch (e) {
+      console.error("Failed to embed stamp image:", e);
+    }
+  } else {
+    // Fallback: Draw a placeholder rectangle if no stamp found
+    page.drawRectangle({
+      x: stampX,
+      y: stampY,
+      width: stampWidth,
+      height: stampHeight,
+      borderColor: rgb(0.7, 0.7, 0.7),
+      borderWidth: 1,
+      color: rgb(0.95, 0.95, 0.95),
+    });
+  }
+
+  // Draw Postmark (Stempel) OVER the stamp
+  // We use the existing 'stempel.png' if available, or draw a simple one
+  // The original code didn't seem to load a 'stempel.png', it just drew text?
+  // Looking at previous file content, I don't see a stempel image being loaded.
+  // I will draw a simple vector postmark or load one if it exists.
+  // Since I don't have a stempel asset, I'll draw a circle and some wavy lines.
+
+  // Draw simulated postmark
+  const postmarkX = stampX - 10;
+  const postmarkY = stampY - 10;
+  const postmarkRadius = 25;
+
+  page.drawCircle({
+    x: postmarkX,
+    y: postmarkY,
+    size: postmarkRadius,
+    borderColor: rgb(0.2, 0.2, 0.2),
+    borderWidth: 2,
+    opacity: 0.7,
+  });
+
+  // Wavy lines
+  // ... (omitted for simplicity, circle is enough for now)
+
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  page.drawText("HTW DRESDEN", {
+    x: postmarkX - 20,
+    y: postmarkY + 5,
+    size: 6,
+    font: font,
+    color: rgb(0.2, 0.2, 0.2),
+    rotate: degrees(-15),
+    opacity: 0.7,
+  });
+  page.drawText(new Date().toLocaleDateString("de-DE"), {
+    x: postmarkX - 15,
+    y: postmarkY - 5,
+    size: 6,
+    font: font,
+    color: rgb(0.2, 0.2, 0.2),
+    rotate: degrees(-15),
+    opacity: 0.7,
+  });
 
   // 1. Background Construction
   // White background for left side

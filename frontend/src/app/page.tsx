@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./page.module.css";
 import { createPostcardPdf, type PostcardFormData } from "@/lib/pdf";
 import PineBranches from "../components/PineBranches";
+import { COUNTRIES } from "@/lib/countries";
 
 const FACULTIES = [
   "Bauingenieurwesen",
@@ -38,7 +39,8 @@ export default function Page() {
   const [email, setEmail] = useState("");
   const [emailTouched, setEmailTouched] = useState(false);
   const [faculty, setFaculty] = useState<string | "">("");
-  const [location, setLocation] = useState("");
+  const [country, setCountry] = useState<string>("");
+  const [university, setUniversity] = useState<string>("");
   const [term, setTerm] = useState("");
   const [message, setMessage] = useState("");
   const [agree, setAgree] = useState(false);
@@ -69,6 +71,10 @@ export default function Page() {
     event.preventDefault();
     if (!fullName.trim()) {
       setStatus({ type: "error", message: "Bitte zuerst den Namen ausfüllen." });
+      return;
+    }
+    if (!country || !university) {
+      setStatus({ type: "error", message: "Bitte Land und Universität auswählen." });
       return;
     }
 
@@ -128,7 +134,10 @@ export default function Page() {
       // Meta data - append individually for backend validation
       formData.append("fullName", fullName);
       formData.append("email", email);
-      if (trimmedLocation) formData.append("location", trimmedLocation);
+
+      const locationString = university ? `${university}, ${country}` : country;
+      if (locationString) formData.append("location", locationString);
+
       if (faculty) formData.append("faculty", faculty);
       if (term.trim()) formData.append("term", term.trim());
       if (trimmedMessage) formData.append("message", trimmedMessage);
@@ -157,7 +166,8 @@ export default function Page() {
       setShowPreview(false);
       setFullName("");
       setEmail("");
-      setLocation("");
+      setCountry("");
+      setUniversity("");
       setFaculty("");
       setTerm("");
       setMessage("");
@@ -350,7 +360,7 @@ export default function Page() {
 
   const charCount = message.length;
   const emailValid = EMAIL_REGEX.test(email.trim());
-  const trimmedLocation = location.trim();
+  const locationString = university ? `${university}, ${country}` : country;
   const trimmedMessage = message.trim();
   const trimmedName = fullName.trim();
 
@@ -447,13 +457,17 @@ export default function Page() {
     setImages((prev) => prev.filter((image) => image.id !== id));
   };
 
-  const buildPdfPayload = (): PostcardFormData => ({
-    fullName: fullName.trim() || "",
-    faculty: faculty || undefined,
-    location: location.trim() || undefined,
-    term: termDisplay || undefined,
-    message: message.trim() || undefined,
-  });
+  const buildPdfPayload = (): PostcardFormData => {
+    return {
+      fullName,
+      email,
+      faculty,
+      location: university ? `${university}, ${country}` : country, // Combine for backend compatibility
+      country, // Pass country separately for stamp logic
+      term,
+      message,
+    };
+  };
 
 
 
@@ -672,21 +686,54 @@ export default function Page() {
                     />
                   </div>
 
+                  {/* Country Selection */}
                   <div className={styles.fieldGroup}>
-                    <label htmlFor="location" className={styles.label}>
-                      Ort / Land
+                    <label htmlFor="country" className={styles.label}>
+                      Land <span className={styles.required}>*</span>
                     </label>
-                    <input
-                      type="text"
-                      id="location"
-                      name="location"
-                      placeholder="z.B. Paris, Frankreich"
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      className={styles.input}
-                    />
+                    <select
+                      id="country"
+                      className={styles.select}
+                      value={country}
+                      onChange={(e) => {
+                        setCountry(e.target.value);
+                        setUniversity(""); // Reset university when country changes
+                      }}
+                      required
+                    >
+                      <option value="">Bitte wählen...</option>
+                      {Object.keys(COUNTRIES).sort().map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
+                  {/* University Selection (dependent on country) */}
+                  <div className={styles.fieldGroup}>
+                    <label htmlFor="university" className={styles.label}>
+                      Universität / Hochschule <span className={styles.required}>*</span>
+                    </label>
+                    <select
+                      id="university"
+                      className={styles.select}
+                      value={university}
+                      onChange={(e) => setUniversity(e.target.value)}
+                      disabled={!country}
+                      required
+                    >
+                      <option value="">
+                        {country ? "Bitte wählen..." : "Zuerst Land auswählen"}
+                      </option>
+                      {country &&
+                        COUNTRIES[country]?.map((uni) => (
+                          <option key={uni} value={uni}>
+                            {uni}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
                   <div className={styles.fieldGroup}>
                     <div className={styles.dateInputs}>
                       <div>
@@ -830,8 +877,8 @@ export default function Page() {
                             {/* Signature / Meta Info */}
                             <div className={styles.postcardSignature}>
                               <div className={styles.postcardMeta}>
-                                {trimmedLocation && <span>{trimmedLocation}</span>}
-                                {trimmedLocation && (faculty || termDisplay) && <span> • </span>}
+                                {locationString && <span>{locationString}</span>}
+                                {locationString && (faculty || termDisplay) && <span> • </span>}
                                 {faculty && <span>{faculty}</span>}
                                 {faculty && termDisplay && <span> • </span>}
                                 {termDisplay && <span>{termDisplay}</span>}
