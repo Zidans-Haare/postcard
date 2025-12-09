@@ -758,6 +758,21 @@ export default function Page() {
                       <div>
                         <label htmlFor="term" className={styles.label}>
                           Zeitraum
+                          <span style={{ fontWeight: "normal", fontSize: "0.85em", color: "#64748B", marginLeft: "0.5rem" }}>
+                            (Aktuell: {(() => {
+                              const now = new Date();
+                              const month = now.getMonth(); // 0-11
+                              const year = now.getFullYear();
+                              const shortYear = year % 100;
+                              if (month >= 3 && month <= 8) {
+                                return `SoSe 20${shortYear}`;
+                              } else {
+                                const startYear = month >= 9 ? shortYear : shortYear - 1;
+                                const endYear = startYear + 1;
+                                return `WiSe 20${startYear}/${endYear}`;
+                              }
+                            })()})
+                          </span>
                         </label>
                         <select
                           id="term"
