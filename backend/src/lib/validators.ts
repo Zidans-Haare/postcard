@@ -2,12 +2,14 @@ import { z } from "zod";
 import { config } from "../config";
 
 const FACULTIES = [
-  "Informatik/Mathematik",
-  "Wirtschaftswissenschaften",
-  "Maschinenbau/Verfahrenstechnik",
+  "Bauingenieurwesen",
   "Elektrotechnik",
+  "Informatik/Mathematik",
+  "Landbau/Umwelt/Chemie",
+  "Maschinenbau",
+  "Geoinformation",
   "Design",
-  "Andere",
+  "Wirtschaftswissenschaften",
 ] as const;
 
 export const uploadFieldsSchema = z.object({

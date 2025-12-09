@@ -8,12 +8,14 @@ import { createPostcardPdf, type PostcardFormData } from "@/lib/pdf";
 import PineBranches from "../components/PineBranches";
 
 const FACULTIES = [
-  "Informatik/Mathematik",
-  "Wirtschaftswissenschaften",
-  "Maschinenbau/Verfahrenstechnik",
+  "Bauingenieurwesen",
   "Elektrotechnik",
+  "Informatik/Mathematik",
+  "Landbau/Umwelt/Chemie",
+  "Maschinenbau",
+  "Geoinformation",
   "Design",
-  "Andere",
+  "Wirtschaftswissenschaften",
 ] as const;
 
 const MAX_MESSAGE_LENGTH = 1000;

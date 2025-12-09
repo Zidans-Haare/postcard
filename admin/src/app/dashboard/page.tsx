@@ -12,12 +12,14 @@ import {
 
 const FACULTIES = [
   "",
-  "Informatik/Mathematik",
-  "Wirtschaftswissenschaften",
-  "Maschinenbau/Verfahrenstechnik",
+  "Bauingenieurwesen",
   "Elektrotechnik",
+  "Informatik/Mathematik",
+  "Landbau/Umwelt/Chemie",
+  "Maschinenbau",
+  "Geoinformation",
   "Design",
-  "Andere",
+  "Wirtschaftswissenschaften",
 ];
 
 const STATUSES = [
