@@ -75,7 +75,14 @@ Nginx fungiert als Reverse Proxy und liefert statische Dateien aus.
 
 ## Letzte Änderungen
 
-### 08.12.2025: Sicherheitsupdate (Next.js/React)
+### 09.12.2025: Sicherheitsupdate & Downgrade (Next.js 14)
+Aufgrund von Inkompatibilitäten mit Version 16 wurde ein Downgrade auf die stabile Version 14 durchgeführt, jedoch unter Verwendung der aktuellsten Sicherheitspatches.
+*   **Maßnahme:** Downgrade von `next` auf Version `14.2.23` (LTS mit Security Fixes) in allen Modulen.
+*   **Security Override:** Erzwingen der `glob` Version `10.4.5` via `overrides` in `package.json`, um Schwachstellen in Entwickler-Abhängigkeiten zu beheben.
+*   **Status:** System läuft stabil und sicher. Kritische Lücken (CVE-2024-46982 etc.) sind geschlossen.
+
+### 08.12.2025: Sicherheitsupdate (Next.js/React) - VERALTET (Revidiert)
+*Hinweis: Das Update auf Version 16.0.7 führte zu Build-Fehlern und wurde am 09.12.2025 revidiert (siehe oben).*
 Aufgrund einer kritischen Sicherheitswarnung (CVE-2025-55182, CVE-2025-66478) wurden alle Komponenten überprüft und aktualisiert.
 *   **Maßnahme:** Update von `next` auf Version `16.0.7` in `frontend`, `admin` und `backend`.
 *   **Status:** Alle drei Module verwenden nun die gepatchte Version `16.0.7`.
