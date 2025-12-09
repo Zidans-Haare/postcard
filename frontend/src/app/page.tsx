@@ -842,7 +842,7 @@ export default function Page() {
                         <div className={styles.postcardRightCol}>
                           <div className={styles.postcardAddress}>
                             <span>HTW Dresden</span>
-                            <span>Stabstelle Internationales</span>
+                            <span>Stabsstelle Internationales</span>
                             <span>Friedrich-List Platz 1</span>
                             <span>01069 Dresden</span>
                           </div>

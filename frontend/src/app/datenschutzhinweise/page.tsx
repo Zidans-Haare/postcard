@@ -24,7 +24,7 @@ export default function DatenschutzhinweisePage() {
       <section className={styles.section}>
         <h2>Verantwortliche Stelle</h2>
         <p>
-          StuRa HTW Dresden – Stabstelle Internationales
+          StuRa HTW Dresden – Stabsstelle Internationales
           <br /> Friedrich-List Platz 1, 01069 Dresden
           <br /> internationale@stura.htw-dresden.de
         </p>

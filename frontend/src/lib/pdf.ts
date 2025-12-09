@@ -266,7 +266,7 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
 
   const addressLines = [
     "HTW Dresden",
-    "Stabstelle Internationales",
+    "Stabsstelle Internationales",
     "Friedrich-List Platz 1",
     "01069 Dresden",
   ];
