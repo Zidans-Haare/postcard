@@ -17,6 +17,7 @@ export interface SaveEntryPayload {
   receivedAt: Date;
   fields: EntryFields;
   consent: boolean;
+  raffle?: boolean;
   postcard: UploadedFile;
   images: UploadedFile[];
 }
@@ -81,6 +82,7 @@ export async function saveEntry(payload: SaveEntryPayload): Promise<EntryMeta> {
     receivedAt: payload.receivedAt.toISOString(),
     status: "received",
     consent: payload.consent,
+    raffle: payload.raffle,
     fields: payload.fields,
     files: {
       postcard: postcardName,
@@ -305,6 +307,7 @@ const CSV_HEADERS = [
   "term",
   "message",
   "consent",
+  "raffle",
   "postcard",
   "images",
 ];
@@ -336,6 +339,7 @@ export async function exportAsCsv(filter: ListFilter = {}): Promise<string> {
       meta.fields.term ?? "",
       meta.fields.message ?? "",
       meta.consent ? "true" : "false",
+      meta.raffle ? "true" : "false",
       meta.files.postcard,
       meta.files.images.join(","),
     ].map(escapeCsv);

@@ -34,6 +34,7 @@ export const uploadFieldsSchema = z.object({
   agree: z.literal("true", {
     errorMap: () => ({ message: "Einwilligung erforderlich." }),
   }),
+  raffle: z.enum(["true", "false"]).optional(),
 });
 
 export const loginSchema = z.object({

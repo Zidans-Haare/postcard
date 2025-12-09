@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./page.module.css";
 import { createPostcardPdf, type PostcardFormData } from "@/lib/pdf";
 import PineBranches from "../components/PineBranches";
@@ -40,6 +40,7 @@ export default function Page() {
   const [term, setTerm] = useState("");
   const [message, setMessage] = useState("");
   const [agree, setAgree] = useState(false);
+  const [raffle, setRaffle] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfGenerating, setPdfGenerating] = useState(false);
@@ -50,6 +51,7 @@ export default function Page() {
   );
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Scroll to preview when it becomes visible
   useEffect(() => {
@@ -101,7 +103,11 @@ export default function Page() {
 
   const handleFinalSubmit = async () => {
     if (!formValid || isSubmitting) return;
+    setShowConfirmModal(true);
+  };
 
+  const confirmSubmit = async (participate: boolean) => {
+    setShowConfirmModal(false);
     setIsSubmitting(true);
     setStatus({ type: "idle", message: "" });
 
@@ -125,6 +131,7 @@ export default function Page() {
       if (term.trim()) formData.append("term", term.trim());
       if (trimmedMessage) formData.append("message", trimmedMessage);
       formData.append("agree", String(agree));
+      formData.append("raffle", String(participate));
 
       const response = await fetch(`${backendBase}/api/upload`, {
         method: "POST",
@@ -156,6 +163,7 @@ export default function Page() {
       setPdfFile(null);
       setPdfUrl(null);
       setAgree(false);
+      setRaffle(false);
       setEmailTouched(false);
 
       // Refresh recent list
@@ -196,7 +204,7 @@ export default function Page() {
   const [recentError, setRecentError] = useState<string | null>(null);
   const recentPreviewsRef = useRef<Record<string, string>>({});
 
-  const loadRecentEntries = () => {
+  const loadRecentEntries = useCallback(() => {
     if (!backendBase) {
       setRecentEntries([]);
       if (Object.keys(recentPreviewsRef.current).length > 0) {
@@ -239,12 +247,12 @@ export default function Page() {
       });
 
     return () => controller.abort();
-  };
+  }, [backendBase]);
 
   useEffect(() => {
     const cleanup = loadRecentEntries();
     return cleanup;
-  }, [backendBase]);
+  }, [loadRecentEntries]);
 
   const mutateRecent = () => {
     loadRecentEntries();
@@ -518,6 +526,8 @@ export default function Page() {
             <h1 className={styles.heroTitle}>Digitale Postkarte</h1>
             <p className={styles.heroLead}>
               Versende digitale Grüße aus deinem Auslandssemester – im offiziellen HTW-Design.
+              <br />
+              <strong>Gewinnspiel:</strong> Die besten 3 Postkarten gewinnen einen 10€ Mensa Gutschein!
             </p>
           </div>
         </div>
@@ -934,6 +944,37 @@ export default function Page() {
             </div>
           </form>
         </div>
+
+        {/* Confirmation Modal */}
+        {
+          showConfirmModal && (
+            <div className={styles.modalOverlay}>
+              <div className={styles.modalContent}>
+                <h3 className={styles.modalTitle}>Gewinnspiel Teilnahme</h3>
+                <p className={styles.modalText}>
+                  Möchtest du mit deiner Postkarte am Gewinnspiel teilnehmen?
+                  <br /><br />
+                  Die besten 3 Einsendungen gewinnen einen <strong>10€ Mensa Gutschein</strong>.
+                  Wenn du teilnimmst, dürfen wir dich im Gewinnfall per E-Mail kontaktieren.
+                </p>
+                <div className={styles.modalActions}>
+                  <button
+                    onClick={() => confirmSubmit(true)}
+                    className={styles.modalButtonPrimary}
+                  >
+                    Ja, teilnehmen und absenden
+                  </button>
+                  <button
+                    onClick={() => confirmSubmit(false)}
+                    className={styles.modalButtonSecondary}
+                  >
+                    Nein, nur absenden
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        }
       </main >
 
       <footer className={styles.footer}>

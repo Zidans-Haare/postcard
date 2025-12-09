@@ -20,6 +20,7 @@ export interface EntryMeta {
   receivedAt: string;
   status: EntryStatus;
   consent: boolean;
+  raffle?: boolean;
   fields: EntryFields;
   files: EntryFiles;
   deletedAt?: string | null;
@@ -31,6 +32,7 @@ export interface EntrySummary {
   receivedAt: string;
   status: EntryStatus;
   consent: boolean;
+  raffle?: boolean;
   fields: EntryFields;
   files: EntryFiles;
   path: string;

@@ -99,6 +99,7 @@ uploadRouter.post("/", uploadLimiter, uploadFields, async (req, res, next) => {
       ref,
       receivedAt: new Date(),
       consent: fields.agree === "true",
+      raffle: fields.raffle === "true",
       fields: {
         fullName: fields.fullName.trim(),
         email: fields.email.toLowerCase(),

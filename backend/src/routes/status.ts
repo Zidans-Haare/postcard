@@ -9,7 +9,7 @@ statusRouter.use(statusLimiter);
 
 statusRouter.get("/recent", async (_req, res, next) => {
   try {
-    const entries = await getRecentEntries(6);
+    const entries = await getRecentEntries(3);
     res.json({
       ok: true,
       items: entries.map((entry) => ({
