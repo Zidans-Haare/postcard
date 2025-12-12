@@ -9,7 +9,7 @@ import { ApiError, fetchEntry, updateEntryStatus } from "@/lib/api";
 interface EntryMeta {
   ref: string;
   receivedAt: string;
-  status: "approved" | "received" | "deleted";
+  status: "approved" | "received" | "deleted" | "winner";
   consent: boolean;
   fields: {
     fullName: string;
@@ -131,6 +131,8 @@ export default function EntryDetailPage() {
         return "Freigegeben";
       case "deleted":
         return "Gelöscht";
+      case "winner":
+        return "Gewinner";
       default:
         return "Eingegangen";
     }
@@ -139,10 +141,16 @@ export default function EntryDetailPage() {
   const statusClass = useMemo(() => {
     if (entry?.status === "approved") return `${styles.statusBadge} ${styles.statusApproved}`;
     if (entry?.status === "deleted") return `${styles.statusBadge} ${styles.statusDeleted}`;
+    if (entry?.status === "winner") return `${styles.statusBadge} ${styles.statusWinner}`; // Need to add style
     return styles.statusBadge;
   }, [entry]);
 
-  const handleStatusUpdate = async (status: "approved" | "received" | "deleted") => {
+  const handleStatusUpdate = async (status: "approved" | "received" | "deleted" | "winner") => {
+    if (status === "deleted") {
+      if (!window.confirm("Möchtest du diesen Eintrag wirklich in den Papierkorb verschieben?")) {
+        return;
+      }
+    }
     try {
       await updateEntryStatus(ref, status);
       setStatusBox({ type: "info", message: "Status wurde aktualisiert." });

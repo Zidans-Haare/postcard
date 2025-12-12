@@ -1,4 +1,4 @@
-export type EntryStatus = "received" | "approved" | "deleted";
+export type EntryStatus = "received" | "approved" | "deleted" | "winner";
 
 export interface EntryFields {
   fullName: string;
@@ -25,6 +25,7 @@ export interface EntryMeta {
   files: EntryFiles;
   deletedAt?: string | null;
   approvedAt?: string | null;
+  archived?: boolean;
 }
 
 export interface EntrySummary {
@@ -33,6 +34,7 @@ export interface EntrySummary {
   status: EntryStatus;
   consent: boolean;
   raffle?: boolean;
+  archived?: boolean;
   fields: EntryFields;
   files: EntryFiles;
   path: string;

@@ -11,6 +11,7 @@ import {
   listEntries,
   loadMeta,
   updateStatus,
+  archiveEntries,
 } from "../lib/storage";
 import { querySchema, statusSchema } from "../lib/validators";
 
@@ -139,6 +140,24 @@ adminRouter.patch("/entries/:ref/status", async (req, res, next) => {
       throw new HttpError(404, "Eintrag wurde nicht gefunden.");
     }
     res.json({ ok: true, meta: updated });
+  } catch (error) {
+    next(error);
+  }
+});
+
+adminRouter.post("/archive", async (req, res, next) => {
+  try {
+    const { beforeDate } = req.body;
+    if (!beforeDate || typeof beforeDate !== "string") {
+      throw new HttpError(400, "beforeDate ist erforderlich.");
+    }
+    const date = new Date(beforeDate);
+    if (isNaN(date.getTime())) {
+      throw new HttpError(400, "Ungültiges Datum.");
+    }
+
+    const count = await archiveEntries(date);
+    res.json({ ok: true, count });
   } catch (error) {
     next(error);
   }

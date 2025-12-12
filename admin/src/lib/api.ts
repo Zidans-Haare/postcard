@@ -58,8 +58,10 @@ export async function logout() {
 export interface EntryListItem {
   ref: string;
   receivedAt: string;
-  status: "approved" | "received" | "deleted";
+  status: "approved" | "received" | "deleted" | "winner";
   consent: boolean;
+  raffle?: boolean;
+  archived?: boolean;
   fields: {
     fullName: string;
     email: string;
@@ -99,8 +101,9 @@ export interface EntryDetailResponse {
   meta: {
     ref: string;
     receivedAt: string;
-    status: "approved" | "received" | "deleted";
+    status: "approved" | "received" | "deleted" | "winner";
     consent: boolean;
+    archived?: boolean;
     fields: {
       fullName: string;
       email: string;
@@ -127,10 +130,17 @@ export async function fetchEntry(ref: string) {
   return apiFetch<EntryDetailResponse>(`/api/admin/entries/${ref}`);
 }
 
-export async function updateEntryStatus(ref: string, status: "approved" | "received" | "deleted") {
+export async function updateEntryStatus(ref: string, status: "approved" | "received" | "deleted" | "winner") {
   return apiFetch<{ ok: boolean }>(`/api/admin/entries/${ref}/status`, {
     method: "PATCH",
     body: JSON.stringify({ status }),
+  });
+}
+
+export async function archiveEntries(beforeDate: string) {
+  return apiFetch<{ count: number }>("/api/admin/archive", {
+    method: "POST",
+    body: JSON.stringify({ beforeDate }),
   });
 }
 

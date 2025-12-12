@@ -347,3 +347,23 @@ export async function exportAsCsv(filter: ListFilter = {}): Promise<string> {
   }
   return lines.join("\n");
 }
+export async function archiveEntries(beforeDate: Date): Promise<number> {
+  const entries = await listEntries({ status: "all" });
+  let count = 0;
+
+  for (const entry of entries) {
+    const receivedAt = new Date(entry.receivedAt);
+    if (receivedAt < beforeDate && !entry.archived) {
+      const dir = directoryFor(receivedAt, entry.ref);
+      const metaPath = join(dir, "meta.json");
+
+      const meta = await loadMeta(entry.ref);
+      if (meta) {
+        meta.archived = true;
+        await fs.writeFile(metaPath, JSON.stringify(meta, null, 2), { encoding: "utf-8" });
+        count++;
+      }
+    }
+  }
+  return count;
+}

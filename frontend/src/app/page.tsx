@@ -33,6 +33,56 @@ interface ImageItem {
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
 
+const Countdown = () => {
+  const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number } | null>(null);
+
+  useEffect(() => {
+    // Hardcoded deadline: January 31, 2026 23:59:59
+    const deadline = new Date("2026-01-31T23:59:59");
+
+    const calculateTimeLeft = () => {
+      const now = new Date();
+      const difference = deadline.getTime() - now.getTime();
+
+      if (difference > 0) {
+        return {
+          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+          minutes: Math.floor((difference / 1000 / 60) % 60),
+        };
+      }
+      return null;
+    };
+
+    setTimeLeft(calculateTimeLeft());
+
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(timer);
+  }, []);
+
+  if (!timeLeft) return null;
+
+  return (
+    <div style={{
+      fontSize: "0.9rem",
+      color: "#64748B",
+      fontWeight: 500,
+      display: "flex",
+      alignItems: "center",
+      gap: "0.5rem",
+      backgroundColor: "#F1F5F9",
+      padding: "0.5rem 1rem",
+      borderRadius: "999px",
+    }}>
+      <span>⏳</span>
+      <span>Einsendeschluss: {timeLeft.days}d {timeLeft.hours}h</span>
+    </div>
+  );
+};
+
 export default function Page() {
   const backendBase = backendUrl ? backendUrl.replace(/\/$/, "") : null;
   const [fullName, setFullName] = useState("");
@@ -192,20 +242,16 @@ export default function Page() {
     }
   };
   const [statusQuery, setStatusQuery] = useState("");
-  const [statusLookup, setStatusLookup] = useState<
-    | { state: "idle" }
-    | { state: "loading" }
-    | { state: "error"; message: string }
-    | {
-      state: "success";
-      payload: {
-        status: "approved" | "received" | "deleted";
-        receivedAt: string;
-        approvedAt: string | null;
-        deletedAt: string | null;
-      };
-    }
-  >({ state: "idle" });
+  const [statusLookup, setStatusLookup] = useState<{
+    state: "idle" | "loading" | "success" | "error";
+    payload?: {
+      status: "approved" | "received" | "deleted";
+      receivedAt: string;
+      approvedAt: string | null;
+      deletedAt: string | null;
+    };
+    message?: string;
+  }>({ state: "idle" });
   const [recentEntries, setRecentEntries] = useState<Array<{
     ref: string;
     receivedAt: string;
@@ -366,6 +412,8 @@ export default function Page() {
 
   const formatDate = (value: string) => {
     if (!value) return "";
+    // Hardcoded deadline: January 31, 2026 23:59:59
+    const deadline = new Date("2026-01-31T23:59:59");
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "";
     return date.toLocaleDateString("de-DE", {
@@ -530,7 +578,10 @@ export default function Page() {
             alt="HTW Dresden"
             className={styles.headerLogo}
           />
-          <div className={styles.headerTitle}>Digitale Postkarte</div>
+          <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+            <Countdown />
+            <div className={styles.headerTitle}>Digitale Postkarte</div>
+          </div>
         </div>
       </header>
 
@@ -540,505 +591,512 @@ export default function Page() {
         <div className={styles.hero}>
           <div className={styles.heroContainer}>
             <h1 className={styles.heroTitle}>Digitale Postkarte</h1>
-            <p className={styles.heroLead}>
-              Versende digitale Grüße aus deinem Auslandssemester – im offiziellen HTW-Design.
-              <br />
-              <strong>Gewinnspiel:</strong> Die besten 3 Postkarten gewinnen einen 10€ Mensa Gutschein!
+            <p className={styles.intro}>
+              Erstelle deine digitale Postkarte und sende Grüße aus deinem Auslandssemester an die HTW Dresden!
+              Lade ein Foto hoch, schreibe einen Text und wir drucken die Karte für dich aus.
             </p>
-          </div>
-        </div>
 
-        <div className={styles.recentPanel} aria-live="polite">
-          <div>
-            <h2 className={styles.sectionTitle}>Gerade eingereichte Postkarten</h2>
-            <p className={styles.recentLead}>
-              Lass dich von den neuesten Einsendungen inspirieren. Jede Karte zeigt, wie das finale Layout wirkt.
-            </p>
-          </div>
-          {recentError && <p className={styles.recentError}>{recentError}</p>}
-          {!recentError && recentEntries.length === 0 && (
-            <p className={styles.recentEmpty}>Noch keine Einreichungen – sei die erste Person, die ihre Postkarte teilt!</p>
-          )}
-          <div className={styles.recentGrid}>
-            {recentEntries.map((entry) => {
-              const previewUrl = backendBase
-                ? `${backendBase}/api/status/${encodeURIComponent(entry.ref)}/postcard`
-                : undefined;
-              const previewBlobUrl = recentPreviews[entry.ref];
-              return (
-                <article key={entry.ref} className={styles.recentCard}>
-                  <div className={styles.recentPreview}>
-                    {previewBlobUrl ? (
-                      <object
-                        className={styles.recentPreviewFrame}
-                        data={previewBlobUrl}
-                        type="application/pdf"
-                      >
-                        {previewUrl && (
-                          <a href={previewUrl} target="_blank" rel="noreferrer">
-                            Postkarte öffnen
-                          </a>
-                        )}
-                      </object>
-                    ) : (
-                      <div className={styles.recentPreviewFallback}>
-                        <span>
-                          {entry.postcardAvailable
-                            ? "Vorschau wird geladen…"
-                            : "Vorschau nicht verfügbar"}
-                        </span>
-                        {previewUrl && (
-                          <a href={previewUrl} target="_blank" rel="noreferrer">
-                            Postkarte öffnen
-                          </a>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className={styles.recentDetails}>
-                    <p className={styles.recentLocation}>
-                      {entry.location || "Ort/Uni nicht angegeben"}
-                    </p>
-                    <p className={styles.recentDate}>
-                      Eingereicht am {formatDateTimeShort(entry.receivedAt)}
-                    </p>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className={styles.contentGrid}>
-          {isSubmitted ? (
-            <div className={styles.successPanel}>
-              <div style={{ textAlign: "center", padding: "3rem 1rem" }}>
-                <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>🎉</div>
-                <h2 className={styles.sectionTitle} style={{ borderBottom: "none", marginBottom: "1rem" }}>
-                  Geschafft!
-                </h2>
-                <p style={{ fontSize: "1.2rem", color: "#475569", marginBottom: "2rem", lineHeight: "1.6" }}>
-                  Deine Postkarte wurde erfolgreich eingereicht und wird nun geprüft.
-                </p>
-                {status.ref && (
-                  <div style={{ background: "#F1F5F9", padding: "1.5rem", borderRadius: "12px", display: "inline-block", marginBottom: "2rem" }}>
-                    <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.9rem", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: "600" }}>
-                      Deine Referenz-ID
-                    </p>
-                    <p style={{ margin: 0, fontSize: "2rem", fontWeight: "700", color: "#0F172A", fontFamily: "monospace" }}>
-                      {status.ref}
-                    </p>
-                  </div>
-                )}
-                <p style={{ color: "#64748B", marginBottom: "3rem" }}>
-                  Speichere dir die ID, um den Status deiner Karte später abzurufen.
-                </p>
-                <button
-                  onClick={() => {
-                    setIsSubmitted(false);
-                    setStatus({ type: "idle", message: "" });
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  className={styles.primaryButton}
-                >
-                  Neue Postkarte erstellen
-                </button>
-              </div>
+            <div className={styles.previewContainer}>
+              <p className={styles.heroLead}>
+                Versende digitale Grüße aus deinem Auslandssemester – im offiziellen HTW-Design.
+                <br />
+                <strong>Gewinnspiel:</strong> Die besten 3 Postkarten gewinnen einen 10€ Mensa Gutschein!
+              </p>
             </div>
-          ) : (
-            <>
-              {/* Form Panel */}
-              <div className={styles.formPanel}>
-                <h2 className={styles.sectionTitle}>Karte erstellen</h2>
+          </div>
 
-                <form onSubmit={handleGenerate} className={styles.form}>
-                  <div className={styles.fieldGroup}>
-                    <label htmlFor="image" className={styles.label}>
-                      Dein Foto hochladen
-                    </label>
-                    <input
-                      type="file"
-                      id="image"
-                      accept="image/*"
-                      onChange={(e) => handleImageSelection(e.target.files)}
-                      className={styles.fileInput}
-                    />
-                    {images.length > 0 && (
-                      <div style={{ marginTop: "0.5rem", fontSize: "0.9rem", color: "#475569" }}>
-                        Ausgewählt: {images[0].file.name}
-                      </div>
-                    )}
-                  </div>
+          <div className={styles.recentPanel} aria-live="polite">
+            <div>
+              <h2 className={styles.sectionTitle}>Gerade eingereichte Postkarten</h2>
+              <p className={styles.recentLead}>
+                Lass dich von den neuesten Einsendungen inspirieren. Jede Karte zeigt, wie das finale Layout wirkt.
+              </p>
+            </div>
+            {recentError && <p className={styles.recentError}>{recentError}</p>}
+            {!recentError && recentEntries.length === 0 && (
+              <p className={styles.recentEmpty}>Noch keine Einreichungen – sei die erste Person, die ihre Postkarte teilt!</p>
+            )}
+            <div className={styles.recentGrid}>
+              {recentEntries.map((entry) => {
+                const previewUrl = backendBase
+                  ? `${backendBase}/api/status/${encodeURIComponent(entry.ref)}/postcard`
+                  : undefined;
+                const previewBlobUrl = recentPreviews[entry.ref];
+                return (
+                  <article key={entry.ref} className={styles.recentCard}>
+                    <div className={styles.recentPreview}>
+                      {previewBlobUrl ? (
+                        <object
+                          className={styles.recentPreviewFrame}
+                          data={previewBlobUrl}
+                          type="application/pdf"
+                        >
+                          {previewUrl && (
+                            <a href={previewUrl} target="_blank" rel="noreferrer">
+                              Postkarte öffnen
+                            </a>
+                          )}
+                        </object>
+                      ) : (
+                        <div className={styles.recentPreviewFallback}>
+                          <span>
+                            {entry.postcardAvailable
+                              ? "Vorschau wird geladen…"
+                              : "Vorschau nicht verfügbar"}
+                          </span>
+                          {previewUrl && (
+                            <a href={previewUrl} target="_blank" rel="noreferrer">
+                              Postkarte öffnen
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className={styles.recentDetails}>
+                      <p className={styles.recentLocation}>
+                        {entry.location || "Ort/Uni nicht angegeben"}
+                      </p>
+                      <p className={styles.recentDate}>
+                        Eingereicht am {formatDateTimeShort(entry.receivedAt)}
+                      </p>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
 
-                  <div className={styles.fieldGroup}>
-                    <label htmlFor="fullName" className={styles.label}>
-                      Dein Name
-                    </label>
-                    <input
-                      type="text"
-                      id="fullName"
-                      name="fullName"
-                      placeholder="Vorname Nachname"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className={styles.input}
-                      required
-                    />
-                  </div>
+          <div className={styles.contentGrid}>
+            {isSubmitted ? (
+              <div className={styles.successPanel}>
+                <div style={{ textAlign: "center", padding: "3rem 1rem" }}>
+                  <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>🎉</div>
+                  <h2 className={styles.sectionTitle} style={{ borderBottom: "none", marginBottom: "1rem" }}>
+                    Geschafft!
+                  </h2>
+                  <p style={{ fontSize: "1.2rem", color: "#475569", marginBottom: "2rem", lineHeight: "1.6" }}>
+                    Deine Postkarte wurde erfolgreich eingereicht und wird nun geprüft.
+                  </p>
+                  {status.ref && (
+                    <div style={{ background: "#F1F5F9", padding: "1.5rem", borderRadius: "12px", display: "inline-block", marginBottom: "2rem" }}>
+                      <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.9rem", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: "600" }}>
+                        Deine Referenz-ID
+                      </p>
+                      <p style={{ margin: 0, fontSize: "2rem", fontWeight: "700", color: "#0F172A", fontFamily: "monospace" }}>
+                        {status.ref}
+                      </p>
+                    </div>
+                  )}
+                  <p style={{ color: "#64748B", marginBottom: "3rem" }}>
+                    Speichere dir die ID, um den Status deiner Karte später abzurufen.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setIsSubmitted(false);
+                      setStatus({ type: "idle", message: "" });
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className={styles.primaryButton}
+                  >
+                    Neue Postkarte erstellen
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Form Panel */}
+                <div className={styles.formPanel}>
+                  <h2 className={styles.sectionTitle}>Karte erstellen</h2>
 
-                  {/* Country Selection */}
-                  <div className={styles.fieldGroup}>
-                    <label htmlFor="country" className={styles.label}>
-                      Land <span className={styles.required}>*</span>
-                    </label>
-                    <select
-                      id="country"
-                      className={styles.select}
-                      value={country}
-                      onChange={(e) => {
-                        setCountry(e.target.value);
-                        setUniversity(""); // Reset university when country changes
-                      }}
-                      required
-                    >
-                      <option value="">Bitte wählen...</option>
-                      {Object.keys(COUNTRIES).sort().map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <form onSubmit={handleGenerate} className={styles.form}>
+                    <div className={styles.fieldGroup}>
+                      <label htmlFor="image" className={styles.label}>
+                        Dein Foto hochladen
+                      </label>
+                      <input
+                        type="file"
+                        id="image"
+                        accept="image/*"
+                        onChange={(e) => handleImageSelection(e.target.files)}
+                        className={styles.fileInput}
+                      />
+                      {images.length > 0 && (
+                        <div style={{ marginTop: "0.5rem", fontSize: "0.9rem", color: "#475569" }}>
+                          Ausgewählt: {images[0].file.name}
+                        </div>
+                      )}
+                    </div>
 
-                  {/* University Selection (dependent on country) */}
-                  <div className={styles.fieldGroup}>
-                    <label htmlFor="university" className={styles.label}>
-                      Universität / Hochschule <span className={styles.required}>*</span>
-                    </label>
-                    <select
-                      id="university"
-                      className={styles.select}
-                      value={university}
-                      onChange={(e) => setUniversity(e.target.value)}
-                      disabled={!country}
-                      required
-                    >
-                      <option value="">
-                        {country ? "Bitte wählen..." : "Zuerst Land auswählen"}
-                      </option>
-                      {country &&
-                        COUNTRIES[country]?.map((uni) => (
-                          <option key={uni} value={uni}>
-                            {uni}
+                    <div className={styles.fieldGroup}>
+                      <label htmlFor="fullName" className={styles.label}>
+                        Dein Name
+                      </label>
+                      <input
+                        type="text"
+                        id="fullName"
+                        name="fullName"
+                        placeholder="Vorname Nachname"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className={styles.input}
+                        required
+                      />
+                    </div>
+
+                    {/* Country Selection */}
+                    <div className={styles.fieldGroup}>
+                      <label htmlFor="country" className={styles.label}>
+                        Land <span className={styles.required}>*</span>
+                      </label>
+                      <select
+                        id="country"
+                        className={styles.select}
+                        value={country}
+                        onChange={(e) => {
+                          setCountry(e.target.value);
+                          setUniversity(""); // Reset university when country changes
+                        }}
+                        required
+                      >
+                        <option value="">Bitte wählen...</option>
+                        {Object.keys(COUNTRIES).sort().map((c) => (
+                          <option key={c} value={c}>
+                            {c}
                           </option>
                         ))}
-                    </select>
-                  </div>
-                  <div className={styles.fieldGroup}>
-                    <div className={styles.dateInputs}>
-                      <div>
-                        <label htmlFor="faculty" className={styles.label}>
-                          Fakultät
-                        </label>
-                        <select
-                          id="faculty"
-                          name="faculty"
-                          value={faculty}
-                          onChange={(e) => setFaculty(e.target.value)}
-                          className={styles.select}
-                        >
-                          <option value="">Bitte wählen...</option>
-                          {FACULTIES.map((fac) => (
-                            <option key={fac} value={fac}>
-                              {fac}
+                      </select>
+                    </div>
+
+                    {/* University Selection (dependent on country) */}
+                    <div className={styles.fieldGroup}>
+                      <label htmlFor="university" className={styles.label}>
+                        Universität / Hochschule <span className={styles.required}>*</span>
+                      </label>
+                      <select
+                        id="university"
+                        className={styles.select}
+                        value={university}
+                        onChange={(e) => setUniversity(e.target.value)}
+                        disabled={!country}
+                        required
+                      >
+                        <option value="">
+                          {country ? "Bitte wählen..." : "Zuerst Land auswählen"}
+                        </option>
+                        {country &&
+                          COUNTRIES[country]?.map((uni) => (
+                            <option key={uni} value={uni}>
+                              {uni}
                             </option>
                           ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label htmlFor="term" className={styles.label}>
-                          Zeitraum
-                          <span style={{ fontWeight: "normal", fontSize: "0.85em", color: "#64748B", marginLeft: "0.5rem" }}>
-                            (Aktuell: {(() => {
-                              const now = new Date();
-                              const month = now.getMonth(); // 0-11
-                              const year = now.getFullYear();
-                              const shortYear = year % 100;
-                              if (month >= 3 && month <= 8) {
-                                return `SoSe 20${shortYear}`;
-                              } else {
-                                const startYear = month >= 9 ? shortYear : shortYear - 1;
-                                const endYear = startYear + 1;
-                                return `WiSe 20${startYear}/${endYear}`;
-                              }
-                            })()})
-                          </span>
-                        </label>
-                        <select
-                          id="term"
-                          name="term"
-                          value={term}
-                          onChange={(e) => setTerm(e.target.value)}
-                          className={styles.select}
-                        >
-                          <option value="">Bitte wählen...</option>
-                          <option value="WiSe 2024/25">WiSe 2024/25</option>
-                          <option value="SoSe 2025">SoSe 2025</option>
-                          <option value="WiSe 2025/26">WiSe 2025/26</option>
-                          <option value="SoSe 2026">SoSe 2026</option>
-                          <option value="WiSe 2026/27">WiSe 2026/27</option>
-                          <option value="SoSe 2027">SoSe 2027</option>
-                        </select>
+                      </select>
+                    </div>
+                    <div className={styles.fieldGroup}>
+                      <div className={styles.dateInputs}>
+                        <div>
+                          <label htmlFor="faculty" className={styles.label}>
+                            Fakultät
+                          </label>
+                          <select
+                            id="faculty"
+                            name="faculty"
+                            value={faculty}
+                            onChange={(e) => setFaculty(e.target.value)}
+                            className={styles.select}
+                          >
+                            <option value="">Bitte wählen...</option>
+                            {FACULTIES.map((fac) => (
+                              <option key={fac} value={fac}>
+                                {fac}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label htmlFor="term" className={styles.label}>
+                            Zeitraum
+                            <span style={{ fontWeight: "normal", fontSize: "0.85em", color: "#64748B", marginLeft: "0.5rem" }}>
+                              (Aktuell: {(() => {
+                                const now = new Date();
+                                const month = now.getMonth(); // 0-11
+                                const year = now.getFullYear();
+                                const shortYear = year % 100;
+                                if (month >= 3 && month <= 8) {
+                                  return `SoSe 20${shortYear}`;
+                                } else {
+                                  const startYear = month >= 9 ? shortYear : shortYear - 1;
+                                  const endYear = startYear + 1;
+                                  return `WiSe 20${startYear}/${endYear}`;
+                                }
+                              })()})
+                            </span>
+                          </label>
+                          <select
+                            id="term"
+                            name="term"
+                            value={term}
+                            onChange={(e) => setTerm(e.target.value)}
+                            className={styles.select}
+                          >
+                            <option value="">Bitte wählen...</option>
+                            <option value="WiSe 2024/25">WiSe 2024/25</option>
+                            <option value="SoSe 2025">SoSe 2025</option>
+                            <option value="WiSe 2025/26">WiSe 2025/26</option>
+                            <option value="SoSe 2026">SoSe 2026</option>
+                            <option value="WiSe 2026/27">WiSe 2026/27</option>
+                            <option value="SoSe 2027">SoSe 2027</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className={styles.fieldGroup}>
-                    <label htmlFor="message" className={styles.label}>
-                      Deine Nachricht
-                    </label>
-                    <textarea
-                      id="message"
-                      name="message"
-                      placeholder="Schreibe hier deinen Text..."
-                      maxLength={450}
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      className={styles.textarea}
-                    />
-                    <div className={styles.counter}>
-                      {message.length} / 450 Zeichen
-                    </div>
-                  </div>
-
-                  <div className={styles.fieldGroup}>
-                    <label htmlFor="email" className={styles.label}>
-                      Deine E-Mail-Adresse (für Status-Updates)
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      placeholder="name@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      onBlur={() => setEmailTouched(true)}
-                      className={styles.input}
-                      style={emailTouched && !emailValid ? { borderColor: "#EF4444" } : {}}
-                      required
-                    />
-                    {emailTouched && !emailValid && (
-                      <p style={{ color: "#EF4444", fontSize: "0.85rem", marginTop: "0.25rem" }}>
-                        Bitte gib eine gültige E-Mail-Adresse ein.
-                      </p>
-                    )}
-                  </div>
-
-                  <div className={styles.checkboxRow}>
-                    <input
-                      type="checkbox"
-                      id="consent"
-                      checked={agree}
-                      onChange={(e) => setAgree(e.target.checked)}
-                      required
-                    />
-                    <label htmlFor="consent" style={{ fontSize: "0.9rem", lineHeight: "1.4" }}>
-                      Ich stimme zu, dass meine Daten verarbeitet und die Postkarte veröffentlicht wird.
-                      <br />
-                      <a href="https://www.htw-dresden.de/datenschutz" target="_blank" className={styles.privacyLink}>
-                        Datenschutzerklärung lesen
-                      </a>
-                    </label>
-                  </div>
-
-                  <div className={styles.buttonRow}>
-                    <button
-                      type="submit"
-                      className={styles.primaryButton}
-                      disabled={!canGenerate}
-                    >
-                      Postkarte erzeugen (PDF)
-                    </button>
-                  </div>
-                </form>
-              </div>
-
-              {/* Preview Section - Only visible after generation */}
-              {showPreview && (
-                <div id="preview-section" className={styles.previewPanel} aria-live="polite">
-                  <h2 className={styles.sectionTitle}>Vorschau & Einreichen</h2>
-                  <div className={styles.previewSurface}>
-                    <div className={styles.livePostcard}>
-                      {/* Pine Branches Overlay (Always on top) */}
-                      <PineBranches
-                        src="/postkarte-assets/Tannenzweige_Digitale Postkarte 2025.svg"
-                        className={styles.postcardPine}
+                    <div className={styles.fieldGroup}>
+                      <label htmlFor="message" className={styles.label}>
+                        Deine Nachricht
+                      </label>
+                      <textarea
+                        id="message"
+                        name="message"
+                        placeholder="Schreibe hier deinen Text..."
+                        maxLength={450}
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        className={styles.textarea}
                       />
+                      <div className={styles.counter}>
+                        {message.length} / 450 Zeichen
+                      </div>
+                    </div>
 
-                      <div className={styles.postcardContainer}>
-                        {/* Left Column (White) */}
-                        <div className={styles.postcardLeftCol}>
-                          <img
-                            src="/postkarte-assets/StuRa Logo_Digitale Postkarte 2025.svg"
-                            alt="StuRa HTW Dresden"
-                            className={styles.postcardLogo}
-                          />
+                    <div className={styles.fieldGroup}>
+                      <label htmlFor="email" className={styles.label}>
+                        Deine E-Mail-Adresse (für Status-Updates)
+                      </label>
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="name@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        onBlur={() => setEmailTouched(true)}
+                        className={styles.input}
+                        style={emailTouched && !emailValid ? { borderColor: "#EF4444" } : {}}
+                        required
+                      />
+                      {emailTouched && !emailValid && (
+                        <p style={{ color: "#EF4444", fontSize: "0.85rem", marginTop: "0.25rem" }}>
+                          Bitte gib eine gültige E-Mail-Adresse ein.
+                        </p>
+                      )}
+                    </div>
 
-                          <div className={styles.postcardTextContent}>
-                            <div className={styles.postcardHeading}>Liebe Kommiliton:innen</div>
-                            <div className={styles.postcardMessage}>
-                              {trimmedMessage || "Hier steht dein Kurztext."}
-                            </div>
-                            {/* Signature / Meta Info */}
-                            <div className={styles.postcardSignature}>
-                              <div className={styles.postcardMeta}>
-                                {locationString && <span>{locationString}</span>}
-                                {locationString && (faculty || termDisplay) && <span> • </span>}
-                                {faculty && <span>{faculty}</span>}
-                                {faculty && termDisplay && <span> • </span>}
-                                {termDisplay && <span>{termDisplay}</span>}
+                    <div className={styles.checkboxRow}>
+                      <input
+                        type="checkbox"
+                        id="consent"
+                        checked={agree}
+                        onChange={(e) => setAgree(e.target.checked)}
+                        required
+                      />
+                      <label htmlFor="consent" style={{ fontSize: "0.9rem", lineHeight: "1.4" }}>
+                        Ich stimme zu, dass meine Daten verarbeitet und die Postkarte veröffentlicht wird.
+                        <br />
+                        <a href="https://www.htw-dresden.de/datenschutz" target="_blank" className={styles.privacyLink}>
+                          Datenschutzerklärung lesen
+                        </a>
+                      </label>
+                    </div>
+
+                    <div className={styles.buttonRow}>
+                      <button
+                        type="submit"
+                        className={styles.primaryButton}
+                        disabled={!canGenerate}
+                      >
+                        Postkarte erzeugen (PDF)
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* Preview Section - Only visible after generation */}
+                {showPreview && (
+                  <div id="preview-section" className={styles.previewPanel} aria-live="polite">
+                    <h2 className={styles.sectionTitle}>Vorschau & Einreichen</h2>
+                    <div className={styles.previewSurface}>
+                      <div className={styles.livePostcard}>
+                        {/* Pine Branches Overlay (Always on top) */}
+                        <PineBranches
+                          src="/postkarte-assets/Tannenzweige_Digitale Postkarte 2025.svg"
+                          className={styles.postcardPine}
+                        />
+
+                        <div className={styles.postcardContainer}>
+                          {/* Left Column (White) */}
+                          <div className={styles.postcardLeftCol}>
+                            <img
+                              src="/postkarte-assets/StuRa Logo_Digitale Postkarte 2025.svg"
+                              alt="StuRa HTW Dresden"
+                              className={styles.postcardLogo}
+                            />
+
+                            <div className={styles.postcardTextContent}>
+                              <div className={styles.postcardHeading}>Liebe Kommiliton:innen</div>
+                              <div className={styles.postcardMessage}>
+                                {trimmedMessage || "Hier steht dein Kurztext."}
+                              </div>
+                              {/* Signature / Meta Info */}
+                              <div className={styles.postcardSignature}>
+                                <div className={styles.postcardMeta}>
+                                  {locationString && <span>{locationString}</span>}
+                                  {locationString && (faculty || termDisplay) && <span> • </span>}
+                                  {faculty && <span>{faculty}</span>}
+                                  {faculty && termDisplay && <span> • </span>}
+                                  {termDisplay && <span>{termDisplay}</span>}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
 
-                        {/* Right Column (Orange) */}
-                        <div className={styles.postcardRightCol}>
-                          <div className={styles.postcardAddress}>
-                            <span>HTW Dresden</span>
-                            <span>Stabsstelle Internationales</span>
-                            <span>Friedrich-List Platz 1</span>
-                            <span>01069 Dresden</span>
+                          {/* Right Column (Orange) */}
+                          <div className={styles.postcardRightCol}>
+                            <div className={styles.postcardAddress}>
+                              <span>HTW Dresden</span>
+                              <span>Stabsstelle Internationales</span>
+                              <span>Friedrich-List Platz 1</span>
+                              <span>01069 Dresden</span>
+                            </div>
                           </div>
                         </div>
+
+                        {/* Stamp Overlay (Full Page) */}
+                        <div className={styles.postcardStampArea}>
+                          <img
+                            src="/postkarte-assets/Poststempel_Digitale Postkarte 2025.svg"
+                            alt=""
+                            className={styles.postcardStamp}
+                          />
+                        </div>
                       </div>
 
-                      {/* Stamp Overlay (Full Page) */}
-                      <div className={styles.postcardStampArea}>
-                        <img
-                          src="/postkarte-assets/Poststempel_Digitale Postkarte 2025.svg"
-                          alt=""
-                          className={styles.postcardStamp}
-                        />
+                      <div className={styles.buttonRow} style={{ marginTop: "2rem", justifyContent: "center" }}>
+                        <button
+                          type="button"
+                          onClick={handleFinalSubmit}
+                          className={styles.primaryButton}
+                          disabled={isSubmitting}
+                          style={{ backgroundColor: "#16a34a" }} // Green for submit
+                        >
+                          {isSubmitting ? "Wird eingereicht..." : "Postkarte einreichen"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowPreview(false)}
+                          className={styles.secondaryButton}
+                          style={{ marginLeft: "1rem", padding: "1.2rem 2rem", borderRadius: "2px", border: "1px solid #ccc", background: "white", cursor: "pointer", fontWeight: "600", textTransform: "uppercase" }}
+                        >
+                          Bearbeiten
+                        </button>
                       </div>
-                    </div>
-
-                    <div className={styles.buttonRow} style={{ marginTop: "2rem", justifyContent: "center" }}>
-                      <button
-                        type="button"
-                        onClick={handleFinalSubmit}
-                        className={styles.primaryButton}
-                        disabled={isSubmitting}
-                        style={{ backgroundColor: "#16a34a" }} // Green for submit
-                      >
-                        {isSubmitting ? "Wird eingereicht..." : "Postkarte einreichen"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowPreview(false)}
-                        className={styles.secondaryButton}
-                        style={{ marginLeft: "1rem", padding: "1.2rem 2rem", borderRadius: "2px", border: "1px solid #ccc", background: "white", cursor: "pointer", fontWeight: "600", textTransform: "uppercase" }}
-                      >
-                        Bearbeiten
-                      </button>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {status.type !== "idle" && !isSubmitted && (
-                <div className={`${styles.status} ${status.type === "error" ? styles.statusError : styles.statusSuccess}`}>
-                  <p>{status.message}</p>
-                  {status.type === "success" && status.ref && (
-                    <p>Referenz-ID: {status.ref}</p>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        <div className={styles.statusPanel}>
-          <div>
-            <h2 className={styles.sectionTitle}>Status mit Referenz-ID prüfen</h2>
-            <p className={styles.statusDescription}>
-              Nach dem Einreichen erhältst du eine Referenz-ID. Trage sie hier ein, um den aktuellen Bearbeitungsstand
-              deiner Postkarte nachzuverfolgen.
-            </p>
+                {status.type !== "idle" && !isSubmitted && (
+                  <div className={`${styles.status} ${status.type === "error" ? styles.statusError : styles.statusSuccess}`}>
+                    <p>{status.message}</p>
+                    {status.type === "success" && status.ref && (
+                      <p>Referenz-ID: {status.ref}</p>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </div>
-          <form className={styles.statusForm} onSubmit={handleStatusLookup}>
-            <div className={styles.statusInputRow}>
-              <input
-                className={styles.statusInput}
-                value={statusQuery}
-                onChange={(event) => setStatusQuery(event.target.value)}
-                placeholder="Referenz-ID (z. B. AB12CD34)"
-                aria-label="Referenz-ID"
-              />
-              <button className={styles.statusButton} type="submit">
-                Status abrufen
-              </button>
-            </div>
-            <div className={styles.statusResult} aria-live="polite">
-              {statusLookup.state === "idle" && (
-                <span>Gib deine Referenz-ID ein und bestätige.</span>
-              )}
-              {statusLookup.state === "loading" && <span>Status wird geladen…</span>}
-              {statusLookup.state === "error" && <span className={styles.statusResultError}>{statusLookup.message}</span>}
-              {statusLookup.state === "success" && (
-                <ul>
-                  <li>
-                    <strong>Status:</strong> {statusLabelMap[statusLookup.payload.status]}
-                  </li>
-                  <li>
-                    <strong>Eingegangen:</strong> {formatDateTime(statusLookup.payload.receivedAt)}
-                  </li>
-                  {statusLookup.payload.approvedAt && (
-                    <li>
-                      <strong>Freigegeben:</strong> {formatDateTime(statusLookup.payload.approvedAt)}
-                    </li>
-                  )}
-                  {statusLookup.payload.deletedAt && (
-                    <li>
-                      <strong>Soft Delete:</strong> {formatDateTime(statusLookup.payload.deletedAt)}
-                    </li>
-                  )}
-                </ul>
-              )}
-            </div>
-          </form>
-        </div>
 
-        {/* Confirmation Modal */}
-        {
-          showConfirmModal && (
-            <div className={styles.modalOverlay}>
-              <div className={styles.modalContent}>
-                <h3 className={styles.modalTitle}>Gewinnspiel Teilnahme</h3>
-                <p className={styles.modalText}>
-                  Möchtest du mit deiner Postkarte am Gewinnspiel teilnehmen?
-                  <br /><br />
-                  Die besten 3 Einsendungen gewinnen einen <strong>10€ Mensa Gutschein</strong>.
-                  Wenn du teilnimmst, dürfen wir dich im Gewinnfall per E-Mail kontaktieren.
-                </p>
-                <div className={styles.modalActions}>
-                  <button
-                    onClick={() => confirmSubmit(true)}
-                    className={styles.modalButtonPrimary}
-                  >
-                    Ja, teilnehmen und absenden
-                  </button>
-                  <button
-                    onClick={() => confirmSubmit(false)}
-                    className={styles.modalButtonSecondary}
-                  >
-                    Nein, nur absenden
-                  </button>
+          <div className={styles.statusPanel}>
+            <div>
+              <h2 className={styles.sectionTitle}>Status mit Referenz-ID prüfen</h2>
+              <p className={styles.statusDescription}>
+                Nach dem Einreichen erhältst du eine Referenz-ID. Trage sie hier ein, um den aktuellen Bearbeitungsstand
+                deiner Postkarte nachzuverfolgen.
+              </p>
+            </div>
+            <form className={styles.statusForm} onSubmit={handleStatusLookup}>
+              <div className={styles.statusInputRow}>
+                <input
+                  className={styles.statusInput}
+                  value={statusQuery}
+                  onChange={(event) => setStatusQuery(event.target.value)}
+                  placeholder="Referenz-ID (z. B. AB12CD34)"
+                  aria-label="Referenz-ID"
+                />
+                <button className={styles.statusButton} type="submit">
+                  Status abrufen
+                </button>
+              </div>
+              <div className={styles.statusResult} aria-live="polite">
+                {statusLookup.state === "idle" && (
+                  <span>Gib deine Referenz-ID ein und bestätige.</span>
+                )}
+                {statusLookup.state === "loading" && <span>Status wird geladen…</span>}
+                {statusLookup.state === "error" && <span className={styles.statusResultError}>{statusLookup.message}</span>}
+                {statusLookup.state === "success" && statusLookup.payload && (
+                  <ul>
+                    <li>
+                      <strong>Status:</strong> {statusLabelMap[statusLookup.payload.status]}
+                    </li>
+                    <li>
+                      <strong>Eingegangen:</strong> {formatDateTime(statusLookup.payload.receivedAt)}
+                    </li>
+                    {statusLookup.payload.approvedAt && (
+                      <li>
+                        <strong>Freigegeben:</strong> {formatDateTime(statusLookup.payload.approvedAt)}
+                      </li>
+                    )}
+                    {statusLookup.payload.deletedAt && (
+                      <li>
+                        <strong>Soft Delete:</strong> {formatDateTime(statusLookup.payload.deletedAt)}
+                      </li>
+                    )}
+                  </ul>
+                )}
+              </div>
+            </form>
+          </div>
+
+          {/* Confirmation Modal */}
+          {
+            showConfirmModal && (
+              <div className={styles.modalOverlay}>
+                <div className={styles.modalContent}>
+                  <h3 className={styles.modalTitle}>Gewinnspiel Teilnahme</h3>
+                  <p className={styles.modalText}>
+                    Möchtest du mit deiner Postkarte am Gewinnspiel teilnehmen?
+                    <br /><br />
+                    Die besten 3 Einsendungen gewinnen einen <strong>10€ Mensa Gutschein</strong>.
+                    Wenn du teilnimmst, dürfen wir dich im Gewinnfall per E-Mail kontaktieren.
+                  </p>
+                  <div className={styles.modalActions}>
+                    <button
+                      onClick={() => confirmSubmit(true)}
+                      className={styles.modalButtonPrimary}
+                    >
+                      Ja, teilnehmen und absenden
+                    </button>
+                    <button
+                      onClick={() => confirmSubmit(false)}
+                      className={styles.modalButtonSecondary}
+                    >
+                      Nein, nur absenden
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )
-        }
+            )
+          }
+        </div>
       </main >
 
       <footer className={styles.footer}>
@@ -1049,6 +1107,12 @@ export default function Page() {
             </a>
             <a href="https://www.htw-dresden.de/impressum" target="_blank" className={styles.footerLink}>
               Impressum
+            </a>
+            <a
+              href="mailto:internationales@stura.htw-dresden.de?subject=Supportanfrage%20Digitale%20Postkarte&body=Hallo%2C%0A%0Aich%20habe%20eine%20Frage%20zur%20digitalen%20Postkarte%3A%0A%0A%5BDeine%20Nachricht%20hier%5D%0A%0A"
+              className={styles.footerLink}
+            >
+              Support
             </a>
           </div>
           <div>&copy; {new Date().getFullYear()} StuRa HTW Dresden</div>
