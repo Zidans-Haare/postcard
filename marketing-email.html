@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digitale Postkarte – StuRa HTW Dresden</title>
+    <style>
+        /* Reset & Basics */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #ffffff;
+            font-family: 'Open Sans', Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            color: #333333;
+            line-height: 1.6;
+        }
+
+        table {
+            border-spacing: 0;
+            width: 100%;
+        }
+
+        td {
+            padding: 0;
+        }
+
+        img {
+            border: 0;
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
+        a {
+            text-decoration: none;
+            color: #F29400;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        .header {
+            background-color: #ffffff;
+            padding: 20px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .header-logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a1a1a;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .header-sub {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 2px;
+        }
+
+        /* Hero */
+        .hero {
+            background-color: #F29400;
+            /* HTW Orange */
+            color: #ffffff;
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .hero h1 {
+            font-size: 32px;
+            font-weight: 800;
+            margin: 0 0 15px 0;
+            line-height: 1.2;
+            color: #ffffff;
+        }
+
+        .hero p {
+            font-size: 18px;
+            margin: 0 0 30px 0;
+            opacity: 0.95;
+            color: #ffffff;
+        }
+
+        .hero-btn {
+            display: inline-block;
+            background-color: #ffffff;
+            color: #F29400 !important;
+            font-weight: 700;
+            padding: 15px 30px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Content */
+        .section {
+            padding: 50px 0;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .text-block {
+            font-size: 16px;
+            color: #4b5563;
+            margin-bottom: 20px;
+            text-align: center;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Steps Grid */
+        .steps {
+            display: table;
+            width: 100%;
+            margin-top: 30px;
+        }
+
+        .step-col {
+            display: table-cell;
+            width: 33.33%;
+            text-align: center;
+            padding: 10px;
+            vertical-align: top;
+        }
+
+        .step-num {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background-color: #fff7ed;
+            color: #F29400;
+            border-radius: 50%;
+            line-height: 30px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .step-text {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        /* Examples */
+        .examples {
+            background-color: #f9fafb;
+            padding: 50px 0;
+            text-align: center;
+        }
+
+        .example-grid {
+            margin-top: 30px;
+        }
+
+        .example-img {
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+            margin: 10px;
+        }
+
+        /* Raffle */
+        .raffle {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .raffle h3 {
+            color: #F29400;
+            font-size: 20px;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+        }
+
+        .raffle p {
+            font-size: 16px;
+            color: #d1d5db;
+            margin: 0;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #ffffff;
+            padding: 40px 0;
+            text-align: center;
+            font-size: 12px;
+            color: #9ca3af;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .footer a {
+            color: #6b7280;
+            text-decoration: underline;
+            margin: 0 10px;
+        }
+
+        /* Mobile Responsive */
+        @media only screen and (max-width: 600px) {
+            .hero h1 {
+                font-size: 28px;
+            }
+
+            .step-col {
+                display: block;
+                width: 100%;
+                margin-bottom: 20px;
+            }
+
+            .example-img {
+                width: 100% !important;
+                max-width: 300px !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Header -->
+    <div class="header">
+        <table width="100%">
+            <tr>
+                <td align="left" valign="middle" style="padding-left: 40px;">
+                    <div class="header-logo" style="font-size: 22px;">Digitale Postkarte</div>
+                    <div class="header-sub" style="font-size: 14px;">StuRa HTW Dresden</div>
+                </td>
+                <td align="right" valign="middle" style="padding-right: 40px;">
+                    <img src="stura-logo.png" alt="StuRa Logo" style="display: block; width: 180px; height: auto;">
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Hero -->
+    <div class="hero">
+        <div class="container">
+            <h1>Grüße aus dem Auslandssemester</h1>
+            <p>Teilen Sie Ihre Eindrücke mit der Hochschule – einfach, digital und kostenlos.</p>
+            <a href="http://post.htw.stura-dresden.de" class="hero-btn">Jetzt Postkarte erstellen</a>
+        </div>
+    </div>
+
+    <!-- Intro & Steps -->
+    <div class="section">
+        <div class="container">
+            <h2 class="section-title">So funktioniert es</h2>
+            <p class="text-block">
+                Wir laden Sie herzlich ein, Ihre Erlebnisse mit uns zu teilen.
+            </p>
+
+            <div class="steps">
+                <div class="step-col">
+                    <div class="step-num">1</div>
+                    <div class="step-text">Foto hochladen</div>
+                </div>
+                <div class="step-col">
+                    <div class="step-num">2</div>
+                    <div class="step-text">Grußtext schreiben</div>
+                </div>
+                <div class="step-col">
+                    <div class="step-num">3</div>
+                    <div class="step-text">Absenden & Freuen</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Examples -->
+    <div class="examples">
+        <div class="container">
+            <h2 class="section-title">Inspiration</h2>
+            <p class="text-block">So könnte Ihre Karte aussehen:</p>
+
+            <div class="example-grid">
+                <!-- Using inline-block for simple responsive grid behavior without complex tables -->
+                <img src="example-postcard-1.png" alt="Beispiel 1" class="example-img"
+                    style="display: inline-block; width: 260px;">
+                <img src="example-postcard-2.png" alt="Beispiel 2" class="example-img"
+                    style="display: inline-block; width: 260px;">
+            </div>
+
+            <div style="margin-top: 30px;">
+                <a href="http://post.htw.stura-dresden.de" style="font-weight: 700; font-size: 16px;">Zur Website →</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Raffle -->
+    <div class="raffle">
+        <div class="container">
+            <h3>Gewinnspiel</h3>
+            <p>
+                Unter allen Einsendungen bis zum <strong>31.01.2026</strong> verlosen wir<br>
+                <strong>3x 10€ Mensa-Gutscheine</strong>.
+            </p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <div class="container">
+            <p style="margin-bottom: 10px;">
+                Studentinnen- und Studentenrat der HTW Dresden<br>
+                Friedrich-List-Platz 1, 01069 Dresden
+            </p>
+            <p>
+                <a href="https://www.htw-dresden.de/datenschutz">Datenschutz</a>
+                <a href="https://www.htw-dresden.de/impressum">Impressum</a>
+            </p>
+        </div>
+    </div>
+
+</body>
+
+</html>
