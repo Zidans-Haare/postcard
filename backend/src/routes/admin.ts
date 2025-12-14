@@ -139,6 +139,7 @@ adminRouter.patch("/entries/:ref/status", async (req, res, next) => {
     if (!updated) {
       throw new HttpError(404, "Eintrag wurde nicht gefunden.");
     }
+
     res.json({ ok: true, meta: updated });
   } catch (error) {
     next(error);
