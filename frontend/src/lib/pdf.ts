@@ -264,15 +264,16 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
 
     // --- LAYER 3: STURA LOGO (Top-most asset layer) ---
     const logoWidth = 140;
-    // viewBox is 403x117 -> ratio 3.444
-    const logoHeight = logoWidth * (117 / 403);
-    const logoPng = await convertSvgToPng("/postkarte-assets/StuRa Logo_Digitale Postkarte 2025.svg", logoWidth, logoHeight, ASSET_SCALE);
+    // Use scaleToFit to maintain safe aspect ratio automatically
+    // We give it plenty of height room (100) so width (140) acts as the primary constraint
+    const logoPng = await convertSvgToPng("/postkarte-assets/StuRa Logo_Digitale Postkarte 2025.svg", logoWidth, 100, ASSET_SCALE);
     const logoImage = await doc.embedPng(logoPng);
+    const logoDims = logoImage.scaleToFit(logoWidth, 100);
     page.drawImage(logoImage, {
       x: 20,
-      y: height - 30 - logoHeight,
-      width: logoWidth,
-      height: logoHeight,
+      y: height - 30 - logoDims.height,
+      width: logoDims.width,
+      height: logoDims.height,
     });
 
   } catch (e) {
@@ -284,7 +285,8 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
   const topPadding = 110;
   // Content width matches available space minus paddings
   const availableWidth = width - rightColWidth - leftPadding - 40;
-  const contentWidth = availableWidth;
+  // Reduce width again to match "thinner" look in preview (approx 75%)
+  const contentWidth = availableWidth * 0.75;
   const centerX = leftPadding + (availableWidth / 2);
 
   let cursorY = height - topPadding;
@@ -326,9 +328,9 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
   }
 
   // Signature Area (Bottom Left, above Pine)
-  // Moved up further to match "4rem" margin in CSS + account for pine height
-  const line1Y = 160;
-  const line2Y = 144;
+  // Moved up to 210 to clearly clear the pine branches (originally 210 was safer)
+  const line1Y = 210;
+  const line2Y = 194;
   const footerFontSize = 12;
 
   // Line 1: Location (Uni, Land) or Freemover
@@ -377,8 +379,8 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
 
   // 4. Address Lines (Right Side)
   const addressX = width - rightColWidth + 40;
-  // Lowered from 320 to match bottom-alignment in CSS
-  const addressY = 240;
+  // Raised to 295 (User feedback: 240 was too low, 320 was high)
+  const addressY = 295;
   const addressLineHeight = 38;
 
   const addressLines = [
