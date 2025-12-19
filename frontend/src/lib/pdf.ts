@@ -153,103 +153,6 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
     color: rgb(0.8, 0.8, 0.8),
   });
 
-  // --- STAMP & POSTMARK ---
-  // Load stamp based on country
-  let stampBytes: ArrayBuffer | null = null;
-  if (data.country) {
-    try {
-      // Try PNG first (preferred format from requirements)
-      stampBytes = await loadImage(`/stamps/${data.country}.png`).catch(() => null);
-      if (!stampBytes) {
-        // Try SVG if PNG fails (though we asked for PNGs, good to have fallback if user provides SVGs)
-        // Note: SVG loading in browser context might need conversion. 
-        // For now, let's assume PNGs are provided as requested.
-        // If we really need SVG support here, we'd need to fetch it as text and use convertSvgToPng.
-        // But let's stick to the requirements document asking for PNGs.
-        console.warn(`Stamp for ${data.country} not found (checked .png).`);
-      }
-    } catch (e) {
-      console.error("Error loading stamp:", e);
-    }
-  }
-
-  const stampWidth = 60;
-  const stampHeight = 70; // Approximation, will adjust ratio
-  const stampX = width - stampWidth - 20;
-  const stampY = height - stampHeight - 20;
-
-  if (stampBytes) {
-    try {
-      const stampImage = await doc.embedPng(stampBytes);
-      // Maintain aspect ratio
-      const stampDims = stampImage.scaleToFit(stampWidth, stampHeight);
-
-      page.drawImage(stampImage, {
-        x: width - stampDims.width - 20, // Align right
-        y: height - stampDims.height - 20, // Align top
-        width: stampDims.width,
-        height: stampDims.height,
-      });
-    } catch (e) {
-      console.error("Failed to embed stamp image:", e);
-    }
-  } else {
-    // Fallback: Draw a placeholder rectangle if no stamp found
-    page.drawRectangle({
-      x: stampX,
-      y: stampY,
-      width: stampWidth,
-      height: stampHeight,
-      borderColor: rgb(0.7, 0.7, 0.7),
-      borderWidth: 1,
-      color: rgb(0.95, 0.95, 0.95),
-    });
-  }
-
-  // Draw Postmark (Stempel) OVER the stamp
-  // We use the existing 'stempel.png' if available, or draw a simple one
-  // The original code didn't seem to load a 'stempel.png', it just drew text?
-  // Looking at previous file content, I don't see a stempel image being loaded.
-  // I will draw a simple vector postmark or load one if it exists.
-  // Since I don't have a stempel asset, I'll draw a circle and some wavy lines.
-
-  // Draw simulated postmark
-  const postmarkX = stampX - 10;
-  const postmarkY = stampY - 10;
-  const postmarkRadius = 25;
-
-  page.drawCircle({
-    x: postmarkX,
-    y: postmarkY,
-    size: postmarkRadius,
-    borderColor: rgb(0.2, 0.2, 0.2),
-    borderWidth: 2,
-    opacity: 0.7,
-  });
-
-  // Wavy lines
-  // ... (omitted for simplicity, circle is enough for now)
-
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  page.drawText("HTW DRESDEN", {
-    x: postmarkX - 20,
-    y: postmarkY + 5,
-    size: 6,
-    font: font,
-    color: rgb(0.2, 0.2, 0.2),
-    rotate: degrees(-15),
-    opacity: 0.7,
-  });
-  page.drawText(new Date().toLocaleDateString("de-DE"), {
-    x: postmarkX - 15,
-    y: postmarkY - 5,
-    size: 6,
-    font: font,
-    color: rgb(0.2, 0.2, 0.2),
-    rotate: degrees(-15),
-    opacity: 0.7,
-  });
-
   // 1. Background Construction
   // White background as fallback
   page.drawRectangle({
@@ -282,6 +185,7 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
   });
 
   // --- DRAW USER PHOTO ---
+  let imageLoaded = false;
   if (data.image) {
     try {
       const imageBytes = await data.image.arrayBuffer();
@@ -323,10 +227,14 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
         width: drawW,
         height: drawH,
       });
+      imageLoaded = true;
     } catch (e) {
       console.error("Failed to embed user image:", e);
     }
   }
+
+  // Determine text color based on background (Dark image -> White text; White bg -> Dark text)
+  const textColor = imageLoaded ? rgb(1, 1, 1) : rgb(0.2, 0.2, 0.2);
 
   // 2. Assets (Layered carefully)
   const ASSET_SCALE = 3;
@@ -373,10 +281,10 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
 
   // 3. Text Content (Left Side)
   const leftPadding = 20;
-  const topPadding = 120; // Below Logo (Adjusted to match preview spacing)
-  // Reduce content width to make text box narrower (approx 60% of available space)
+  const topPadding = 110;
+  // Content width matches available space minus paddings
   const availableWidth = width - rightColWidth - leftPadding - 40;
-  const contentWidth = availableWidth * 0.72;
+  const contentWidth = availableWidth;
   const centerX = leftPadding + (availableWidth / 2);
 
   let cursorY = height - topPadding;
@@ -396,7 +304,7 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
     font: sansFont,
     color: rgb(0.1, 0.1, 0.1),
   });
-  cursorY -= 48; // Increased gap from 32
+  cursorY -= 32; // Reduced gap from 48 to match 1rem in CSS
 
   // Message Body (Centered, Sans-Serif)
   const messageText = data.message || "Hier steht dein Kurztext.";
@@ -418,12 +326,9 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
   }
 
   // Signature Area (Bottom Left, above Pine)
-  // Pine branches take up bottom ~150px?
-  const footerY = 200; // Moved up from 160 to avoid pine branches
-
-  // Signature Area (Bottom Left, above Pine)
-  const line1Y = 85;
-  const line2Y = 69;
+  // Moved up further to match "4rem" margin in CSS + account for pine height
+  const line1Y = 160;
+  const line2Y = 144;
   const footerFontSize = 12;
 
   // Line 1: Location (Uni, Land) or Freemover
@@ -435,43 +340,46 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
   if (data.term) line2Parts.push(data.term);
   const line2Text = line2Parts.join(" • ");
 
-  if (locationText && line2Text) {
-    // Both lines present
-    const w1 = sansFont.widthOfTextAtSize(locationText, footerFontSize);
-    page.drawText(locationText, {
-      x: centerX - (w1 / 2),
-      y: line1Y,
-      size: footerFontSize,
-      font: sansFont,
-      color: rgb(1, 1, 1),
-    });
+  if (locationText || line2Text) {
+    if (locationText && line2Text) {
+      // Both lines present
+      const w1 = sansFont.widthOfTextAtSize(locationText, footerFontSize);
+      page.drawText(locationText, {
+        x: centerX - (w1 / 2),
+        y: line1Y,
+        size: footerFontSize,
+        font: sansFont,
+        color: textColor,
+      });
 
-    const w2 = sansFont.widthOfTextAtSize(line2Text, footerFontSize);
-    page.drawText(line2Text, {
-      x: centerX - (w2 / 2),
-      y: line2Y,
-      size: footerFontSize,
-      font: sansFont,
-      color: rgb(1, 1, 1),
-    });
-  } else if (locationText || line2Text) {
-    // Only one of them present -> center vertically between line1Y and line2Y
-    const text = locationText || line2Text;
-    const w = sansFont.widthOfTextAtSize(text, footerFontSize);
-    const midY = (line1Y + line2Y) / 2;
-    page.drawText(text, {
-      x: centerX - (w / 2),
-      y: midY,
-      size: footerFontSize,
-      font: sansFont,
-      color: rgb(1, 1, 1),
-    });
+      const w2 = sansFont.widthOfTextAtSize(line2Text, footerFontSize);
+      page.drawText(line2Text, {
+        x: centerX - (w2 / 2),
+        y: line2Y,
+        size: footerFontSize,
+        font: sansFont,
+        color: textColor,
+      });
+    } else {
+      // Only one of them present -> center vertically between line1Y and line2Y
+      const text = locationText || line2Text;
+      const w = sansFont.widthOfTextAtSize(text, footerFontSize);
+      const midY = (line1Y + line2Y) / 2;
+      page.drawText(text, {
+        x: centerX - (w / 2),
+        y: midY,
+        size: footerFontSize,
+        font: sansFont,
+        color: textColor,
+      });
+    }
   }
 
   // 4. Address Lines (Right Side)
   const addressX = width - rightColWidth + 40;
-  const addressY = 320; // Moved up to match CSS margin-bottom: 280px
-  const addressLineHeight = 38; // Increased line height for larger font
+  // Lowered from 320 to match bottom-alignment in CSS
+  const addressY = 240;
+  const addressLineHeight = 38;
 
   const addressLines = [
     "HTW Dresden",
@@ -479,10 +387,6 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
     "Friedrich-List Platz 1",
     "01069 Dresden",
   ];
-
-  // Use Helvetica as standard sans-serif fallback for Open Sans
-  // const sansFont = await doc.embedFont(StandardFonts.Helvetica); // Already embedded above
-  // const sansBoldFont = await doc.embedFont(StandardFonts.HelveticaBold); // Not needed anymore
 
   for (let i = 0; i < addressLines.length; i++) {
     const lineY = addressY - i * addressLineHeight;
