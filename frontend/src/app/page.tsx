@@ -975,14 +975,7 @@ export default function Page() {
 
                         <div className={styles.postcardContainer}>
                           {/* Left Column (White) */}
-                          <div
-                            className={styles.postcardLeftCol}
-                            style={images[0] ? {
-                              backgroundImage: `url(${URL.createObjectURL(images[0].file)})`,
-                              backgroundSize: "cover",
-                              backgroundPosition: "center"
-                            } : {}}
-                          >
+                          <div className={styles.postcardLeftCol}>
                             <img
                               src="/postkarte-assets/StuRa Logo_Digitale Postkarte 2025.svg"
                               alt="StuRa HTW Dresden"
@@ -995,7 +988,7 @@ export default function Page() {
                                 {trimmedMessage || "Hier steht dein Kurztext."}
                               </div>
                               {/* Signature / Meta Info */}
-                              <div className={styles.postcardSignature} style={{ color: "#fff" }}>
+                              <div className={styles.postcardSignature}>
                                 {locationString && (
                                   <div className={styles.postcardMeta}>
                                     <span>{locationString}</span>

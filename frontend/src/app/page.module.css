@@ -399,8 +399,8 @@
 
 .postcardMessage {
   width: 100%;
-  max-width: 72%;
-  /* Match PDF generation width factor */
+  max-width: 75%;
+  /* Match PDF generation width factor (0.75) */
   margin: 0 auto 2rem auto;
   /* Center horizontally */
   font-family: "Open Sans", sans-serif;
