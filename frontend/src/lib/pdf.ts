@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, StandardFonts, degrees } from "pdf-lib";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import type { PDFFont } from "pdf-lib";
 
 export interface PostcardFormData {
@@ -24,15 +24,19 @@ async function loadImage(url: string): Promise<ArrayBuffer> {
   return response.arrayBuffer();
 }
 
-// Helper to convert SVG string (or URL) to PNG ArrayBuffer via Canvas
-// Note: This runs in the browser.
-async function convertSvgToPng(url: string, width: number, height: number, scale: number = 1, removeWhiteBackground: boolean = false): Promise<Uint8Array> {
+// Helper to convert SVG string (or URL) to PNG ArrayBuffer via Canvas (runs in the browser)
+async function convertSvgToPng(
+  url: string,
+  width: number,
+  height: number,
+  scale: number = 1,
+  removeWhiteBackground: boolean = false
+): Promise<Uint8Array> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "Anonymous";
     img.onload = () => {
       const canvas = document.createElement("canvas");
-      // Create canvas at scaled resolution
       canvas.width = width * scale;
       canvas.height = height * scale;
       const ctx = canvas.getContext("2d");
@@ -40,7 +44,7 @@ async function convertSvgToPng(url: string, width: number, height: number, scale
         reject(new Error("Could not get canvas context"));
         return;
       }
-      // Draw image scaled
+
       ctx.drawImage(img, 0, 0, width * scale, height * scale);
 
       if (removeWhiteBackground) {
@@ -50,9 +54,8 @@ async function convertSvgToPng(url: string, width: number, height: number, scale
           const r = data[i];
           const g = data[i + 1];
           const b = data[i + 2];
-          // If pixel is white (or very close to white), make it transparent
           if (r > 240 && g > 240 && b > 240) {
-            data[i + 3] = 0; // Alpha = 0
+            data[i + 3] = 0;
           }
         }
         ctx.putImageData(imageData, 0, 0);
@@ -138,62 +141,67 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
   const page = doc.addPage(A4_LANDSCAPE);
   const width = page.getWidth();
   const height = page.getHeight();
-
-  const serifFont = await doc.embedFont(StandardFonts.TimesRoman);
-  const serifBoldFont = await doc.embedFont(StandardFonts.TimesRomanBold);
-  // const sansFont = await doc.embedFont(StandardFonts.HelveticaBold);
-
   // --- PAGE CONSTRUCTION (Back Side Only) ---
 
   // 1. Base Backgrounds
-  // White background for the whole page
   page.drawRectangle({
     x: 0,
     y: 0,
-    width: width,
-    height: height,
+    width,
+    height,
     color: rgb(1, 1, 1),
   });
 
-  // Orange background for right side
-  const rightColWidth = 356;
+  const rightColWidth = width / 2;
   page.drawRectangle({
     x: width - rightColWidth,
     y: 0,
     width: rightColWidth,
-    height: height,
-    color: rgb(0.925, 0.427, 0.075), // #ec6d13
+    height,
+    color: rgb(0.925, 0.427, 0.075),
   });
 
   // 2. Decorative Assets
   const ASSET_SCALE = 3;
   try {
-    // --- LAYER 1: PINE BRANCHES ---
-    // Match CSS: bottom: 0, left: 0, object-fit: cover
-    const pinePng = await convertSvgToPng("/postkarte-assets/Tannenzweige_Digitale Postkarte 2025.svg", width, height, ASSET_SCALE, true);
+    const pinePng = await convertSvgToPng(
+      "/postkarte-assets/Tannenzweige_Digitale Postkarte 2025.svg",
+      width,
+      height,
+      ASSET_SCALE,
+      true
+    );
     const pineImage = await doc.embedPng(pinePng);
-    // scaleToFit to width, sitting at bottom
-    const pineDims = pineImage.scaleToFit(width, height);
+    const pineScale = Math.max(width / pineImage.width, height / pineImage.height);
+    const pineDims = pineImage.scale(pineScale);
     page.drawImage(pineImage, {
       x: 0,
-      y: 0, // Bottom
-      width: width,
+      y: 0,
+      width: pineDims.width,
       height: pineDims.height,
     });
 
-    // --- LAYER 2: STAMP OVERLAY ---
-    const stampPng = await convertSvgToPng("/postkarte-assets/Poststempel_Digitale Postkarte 2025.svg", width, height, ASSET_SCALE);
+    const stampPng = await convertSvgToPng(
+      "/postkarte-assets/Poststempel_Digitale Postkarte 2025.svg",
+      width,
+      height,
+      ASSET_SCALE
+    );
     const stampImage = await doc.embedPng(stampPng);
     page.drawImage(stampImage, {
       x: 0,
       y: 0,
-      width: width,
-      height: height,
+      width,
+      height,
     });
 
-    // --- LAYER 3: STURA LOGO ---
     const logoWidth = 140;
-    const logoPng = await convertSvgToPng("/postkarte-assets/StuRa Logo_Digitale Postkarte 2025.svg", logoWidth, 100, ASSET_SCALE);
+    const logoPng = await convertSvgToPng(
+      "/postkarte-assets/StuRa Logo_Digitale Postkarte 2025.svg",
+      logoWidth,
+      100,
+      ASSET_SCALE
+    );
     const logoImage = await doc.embedPng(logoPng);
     const logoDims = logoImage.scaleToFit(logoWidth, 100);
     page.drawImage(logoImage, {
@@ -209,20 +217,19 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
   // 3. Text Content
   const textColor = rgb(0.2, 0.2, 0.2);
   const leftPadding = 20;
-  const topPadding = 110;
+  const topPadding = 150;
   const availableWidth = width - rightColWidth - leftPadding - 40;
   const contentWidth = availableWidth * 0.75;
-  const centerX = leftPadding + (availableWidth / 2);
+  const centerX = leftPadding + availableWidth / 2;
 
   const sansFont = await doc.embedFont(StandardFonts.Helvetica);
   let cursorY = height - topPadding;
 
-  // Heading
   const headingText = "Liebe Kommiliton:innen";
   const headingSize = 17;
   const headingWidth = sansFont.widthOfTextAtSize(headingText, headingSize);
   page.drawText(headingText, {
-    x: centerX - (headingWidth / 2),
+    x: centerX - headingWidth / 2,
     y: cursorY,
     size: headingSize,
     font: sansFont,
@@ -230,7 +237,6 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
   });
   cursorY -= 32;
 
-  // Message
   const messageText = data.message || "Hier steht dein Kurztext.";
   const fontSize = 14;
   const lineHeight = 20;
@@ -238,7 +244,7 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
   for (const line of lines) {
     const lineWidth = sansFont.widthOfTextAtSize(line, fontSize);
     page.drawText(line, {
-      x: centerX - (lineWidth / 2),
+      x: centerX - lineWidth / 2,
       y: cursorY,
       size: fontSize,
       font: sansFont,
@@ -248,11 +254,11 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
   }
 
   // Signature Area
-  const line1Y = 210;
-  const line2Y = 194;
+  const line1Y = 170;
+  const line2Y = 154;
   const footerFontSize = 12;
-  const locationText = data.isFreemover ? "Freemover" : (data.location?.trim() || "");
-  let line2Parts: string[] = [];
+  const locationText = data.isFreemover ? "Freemover" : data.location?.trim() || "";
+  const line2Parts: string[] = [];
   if (data.faculty) line2Parts.push(data.faculty);
   if (data.term) line2Parts.push(data.term);
   const line2Text = line2Parts.join(" • ");
@@ -261,7 +267,7 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
     if (locationText && line2Text) {
       const w1 = sansFont.widthOfTextAtSize(locationText, footerFontSize);
       page.drawText(locationText, {
-        x: centerX - (w1 / 2),
+        x: centerX - w1 / 2,
         y: line1Y,
         size: footerFontSize,
         font: sansFont,
@@ -269,7 +275,7 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
       });
       const w2 = sansFont.widthOfTextAtSize(line2Text, footerFontSize);
       page.drawText(line2Text, {
-        x: centerX - (w2 / 2),
+        x: centerX - w2 / 2,
         y: line2Y,
         size: footerFontSize,
         font: sansFont,
@@ -280,7 +286,7 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
       const w = sansFont.widthOfTextAtSize(text, footerFontSize);
       const midY = (line1Y + line2Y) / 2;
       page.drawText(text, {
-        x: centerX - (w / 2),
+        x: centerX - w / 2,
         y: midY,
         size: footerFontSize,
         font: sansFont,
@@ -318,7 +324,7 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
     });
   }
 
-  // Vertical Separator (Light grey behind the border)
+  // Vertical Separator
   const separatorX = width / 2;
   page.drawLine({
     start: { x: separatorX, y: 40 },
@@ -327,12 +333,12 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
     color: rgb(0.8, 0.8, 0.8),
   });
 
-  // 5. Final Black Border (Drawn last to frame everything)
+  // Final Border
   page.drawRectangle({
     x: 0,
     y: 0,
-    width: width,
-    height: height,
+    width,
+    height,
     borderColor: rgb(0, 0, 0),
     borderWidth: 2,
     color: undefined,
