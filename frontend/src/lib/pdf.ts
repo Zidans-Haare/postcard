@@ -143,35 +143,16 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
   const serifBoldFont = await doc.embedFont(StandardFonts.TimesRomanBold);
   // const sansFont = await doc.embedFont(StandardFonts.HelveticaBold);
 
-  // 2. Right Side (Address Side)
-  // Draw vertical separator line
-  const separatorX = width / 2;
-  page.drawLine({
-    start: { x: separatorX, y: 40 },
-    end: { x: separatorX, y: height - 40 },
-    thickness: 1,
-    color: rgb(0.8, 0.8, 0.8),
-  });
+  // --- PAGE CONSTRUCTION (Back Side Only) ---
 
-  // 1. Background Construction
-  // White background as fallback
+  // 1. Base Backgrounds
+  // White background for the whole page
   page.drawRectangle({
     x: 0,
     y: 0,
     width: width,
     height: height,
     color: rgb(1, 1, 1),
-  });
-
-  // Black Border
-  page.drawRectangle({
-    x: 0,
-    y: 0,
-    width: width,
-    height: height,
-    borderColor: rgb(0, 0, 0),
-    borderWidth: 2,
-    color: undefined,
   });
 
   // Orange background for right side
@@ -184,72 +165,20 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
     color: rgb(0.925, 0.427, 0.075), // #ec6d13
   });
 
-  // --- DRAW USER PHOTO ---
-  let imageLoaded = false;
-  if (data.image) {
-    try {
-      const imageBytes = await data.image.arrayBuffer();
-      let pdfImage;
-      if (data.image.type === "image/png") {
-        pdfImage = await doc.embedPng(imageBytes);
-      } else {
-        pdfImage = await doc.embedJpg(imageBytes);
-      }
-
-      // Calculate "cover" effect for the left column area
-      const leftWidth = width - rightColWidth;
-      const leftHeight = height;
-
-      const imgW = pdfImage.width;
-      const imgH = pdfImage.height;
-      const imgRatio = imgW / imgH;
-      const targetRatio = leftWidth / leftHeight;
-
-      let drawW, drawH, drawX, drawY;
-
-      if (imgRatio > targetRatio) {
-        // Image is wider than target area (height will touch)
-        drawH = leftHeight;
-        drawW = leftHeight * imgRatio;
-        drawX = (leftWidth - drawW) / 2;
-        drawY = 0;
-      } else {
-        // Image is taller than target area (width will touch)
-        drawW = leftWidth;
-        drawH = leftWidth / imgRatio;
-        drawX = 0;
-        drawY = (leftHeight - drawH) / 2;
-      }
-
-      page.drawImage(pdfImage, {
-        x: drawX,
-        y: drawY,
-        width: drawW,
-        height: drawH,
-      });
-      imageLoaded = true;
-    } catch (e) {
-      console.error("Failed to embed user image:", e);
-    }
-  }
-
-  // Determine text color based on background (Dark image -> White text; White bg -> Dark text)
-  const textColor = imageLoaded ? rgb(1, 1, 1) : rgb(0.2, 0.2, 0.2);
-
-  // 2. Assets (Layered carefully)
+  // 2. Decorative Assets
   const ASSET_SCALE = 3;
-
   try {
-    // --- LAYER 1: PINE BRANCHES (Bottom-most asset layer) ---
-    // Match object-fit: cover and bottom: 0 from CSS
+    // --- LAYER 1: PINE BRANCHES ---
+    // Match CSS: bottom: 0, left: 0, object-fit: cover
     const pinePng = await convertSvgToPng("/postkarte-assets/Tannenzweige_Digitale Postkarte 2025.svg", width, height, ASSET_SCALE, true);
     const pineImage = await doc.embedPng(pinePng);
+    // scaleToFit to width, sitting at bottom
     const pineDims = pineImage.scaleToFit(width, height);
     page.drawImage(pineImage, {
       x: 0,
-      y: 0,
+      y: 0, // Bottom
       width: width,
-      height: height,
+      height: pineDims.height,
     });
 
     // --- LAYER 2: STAMP OVERLAY ---
@@ -262,10 +191,8 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
       height: height,
     });
 
-    // --- LAYER 3: STURA LOGO (Top-most asset layer) ---
+    // --- LAYER 3: STURA LOGO ---
     const logoWidth = 140;
-    // Use scaleToFit to maintain safe aspect ratio automatically
-    // We give it plenty of height room (100) so width (140) acts as the primary constraint
     const logoPng = await convertSvgToPng("/postkarte-assets/StuRa Logo_Digitale Postkarte 2025.svg", logoWidth, 100, ASSET_SCALE);
     const logoImage = await doc.embedPng(logoPng);
     const logoDims = logoImage.scaleToFit(logoWidth, 100);
@@ -275,46 +202,39 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
       width: logoDims.width,
       height: logoDims.height,
     });
-
   } catch (e) {
     console.error("Failed to load/convert assets", e);
   }
 
-  // 3. Text Content (Left Side)
+  // 3. Text Content
+  const textColor = rgb(0.2, 0.2, 0.2);
   const leftPadding = 20;
   const topPadding = 110;
-  // Content width matches available space minus paddings
   const availableWidth = width - rightColWidth - leftPadding - 40;
-  // Reduce width again to match "thinner" look in preview (approx 75%)
   const contentWidth = availableWidth * 0.75;
   const centerX = leftPadding + (availableWidth / 2);
 
+  const sansFont = await doc.embedFont(StandardFonts.Helvetica);
   let cursorY = height - topPadding;
 
-  // Use Helvetica as standard sans-serif fallback for Open Sans
-  const sansFont = await doc.embedFont(StandardFonts.Helvetica);
-
-  // "Liebe Kommiliton:innen" (Centered, Sans-Serif, Normal Weight)
+  // Heading
   const headingText = "Liebe Kommiliton:innen";
-  const headingSize = 18;
+  const headingSize = 17;
   const headingWidth = sansFont.widthOfTextAtSize(headingText, headingSize);
-
   page.drawText(headingText, {
     x: centerX - (headingWidth / 2),
     y: cursorY,
-    size: 17,
+    size: headingSize,
     font: sansFont,
     color: rgb(0.1, 0.1, 0.1),
   });
-  cursorY -= 32; // Reduced gap from 48 to match 1rem in CSS
+  cursorY -= 32;
 
-  // Message Body (Centered, Sans-Serif)
+  // Message
   const messageText = data.message || "Hier steht dein Kurztext.";
   const fontSize = 14;
   const lineHeight = 20;
-
   const lines = breakTextIntoLines(messageText, contentWidth, sansFont, fontSize);
-
   for (const line of lines) {
     const lineWidth = sansFont.widthOfTextAtSize(line, fontSize);
     page.drawText(line, {
@@ -322,21 +242,16 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
       y: cursorY,
       size: fontSize,
       font: sansFont,
-      color: rgb(0.2, 0.2, 0.2),
+      color: textColor,
     });
     cursorY -= lineHeight;
   }
 
-  // Signature Area (Bottom Left, above Pine)
-  // Moved up to 210 to clearly clear the pine branches (originally 210 was safer)
+  // Signature Area
   const line1Y = 210;
   const line2Y = 194;
   const footerFontSize = 12;
-
-  // Line 1: Location (Uni, Land) or Freemover
   const locationText = data.isFreemover ? "Freemover" : (data.location?.trim() || "");
-
-  // Line 2: Faculty • Term
   let line2Parts: string[] = [];
   if (data.faculty) line2Parts.push(data.faculty);
   if (data.term) line2Parts.push(data.term);
@@ -344,7 +259,6 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
 
   if (locationText || line2Text) {
     if (locationText && line2Text) {
-      // Both lines present
       const w1 = sansFont.widthOfTextAtSize(locationText, footerFontSize);
       page.drawText(locationText, {
         x: centerX - (w1 / 2),
@@ -353,7 +267,6 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
         font: sansFont,
         color: textColor,
       });
-
       const w2 = sansFont.widthOfTextAtSize(line2Text, footerFontSize);
       page.drawText(line2Text, {
         x: centerX - (w2 / 2),
@@ -363,7 +276,6 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
         color: textColor,
       });
     } else {
-      // Only one of them present -> center vertically between line1Y and line2Y
       const text = locationText || line2Text;
       const w = sansFont.widthOfTextAtSize(text, footerFontSize);
       const midY = (line1Y + line2Y) / 2;
@@ -377,12 +289,10 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
     }
   }
 
-  // 4. Address Lines (Right Side)
+  // 4. Address Side
   const addressX = width - rightColWidth + 40;
-  // Raised to 295 (User feedback: 240 was too low, 320 was high)
   const addressY = 295;
   const addressLineHeight = 38;
-
   const addressLines = [
     "HTW Dresden",
     "Stabsstelle Internationales",
@@ -392,26 +302,41 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
 
   for (let i = 0; i < addressLines.length; i++) {
     const lineY = addressY - i * addressLineHeight;
-    const text = addressLines[i];
-
-    page.drawText(text, {
+    page.drawText(addressLines[i], {
       x: addressX,
       y: lineY,
-      size: 26, // Increased from 22
-      font: sansFont, // Always normal weight
+      size: 26,
+      font: sansFont,
       color: rgb(1, 1, 1),
     });
-
-    // Underline (Fixed width)
-    const lineWidth = 340; // Increased from 280
     page.drawLine({
       start: { x: addressX, y: lineY - 6 },
-      end: { x: addressX + lineWidth, y: lineY - 6 },
+      end: { x: addressX + 340, y: lineY - 6 },
       thickness: 1,
       color: rgb(1, 1, 1),
       opacity: 0.6,
     });
   }
+
+  // Vertical Separator (Light grey behind the border)
+  const separatorX = width / 2;
+  page.drawLine({
+    start: { x: separatorX, y: 40 },
+    end: { x: separatorX, y: height - 40 },
+    thickness: 1,
+    color: rgb(0.8, 0.8, 0.8),
+  });
+
+  // 5. Final Black Border (Drawn last to frame everything)
+  page.drawRectangle({
+    x: 0,
+    y: 0,
+    width: width,
+    height: height,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 2,
+    color: undefined,
+  });
 
   const bytes = await doc.save();
   const normalizedBytes = Uint8Array.from(bytes);
