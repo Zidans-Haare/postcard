@@ -527,6 +527,7 @@ export default function Page() {
       term,
       message,
       isFreemover,
+      image: images[0]?.file, // Pass the first uploaded image
     };
   };
 
@@ -769,7 +770,7 @@ export default function Page() {
                           }
                         }}
                       />
-                      <label htmlFor="isFreemover" style={{ fontSize: "1rem", fontWeight: "600", color: "var(--htw-orange)" }}>
+                      <label htmlFor="isFreemover" style={{ fontSize: "1rem", fontWeight: "600", color: "#475569" }}>
                         Ich bin Freemover (keine Partner-Uni)
                       </label>
                     </div>
@@ -974,7 +975,14 @@ export default function Page() {
 
                         <div className={styles.postcardContainer}>
                           {/* Left Column (White) */}
-                          <div className={styles.postcardLeftCol}>
+                          <div
+                            className={styles.postcardLeftCol}
+                            style={images[0] ? {
+                              backgroundImage: `url(${URL.createObjectURL(images[0].file)})`,
+                              backgroundSize: "cover",
+                              backgroundPosition: "center"
+                            } : {}}
+                          >
                             <img
                               src="/postkarte-assets/StuRa Logo_Digitale Postkarte 2025.svg"
                               alt="StuRa HTW Dresden"
@@ -987,7 +995,7 @@ export default function Page() {
                                 {trimmedMessage || "Hier steht dein Kurztext."}
                               </div>
                               {/* Signature / Meta Info */}
-                              <div className={styles.postcardSignature}>
+                              <div className={styles.postcardSignature} style={{ color: "#fff" }}>
                                 {locationString && (
                                   <div className={styles.postcardMeta}>
                                     <span>{locationString}</span>

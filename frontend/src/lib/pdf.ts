@@ -10,6 +10,7 @@ export interface PostcardFormData {
   term?: string;
   message?: string;
   isFreemover?: boolean;
+  image?: File; // User uploaded photo
 }
 
 const A4_LANDSCAPE: [number, number] = [842, 595];
@@ -84,26 +85,52 @@ function breakTextIntoLines(
   font: PDFFont,
   fontSize: number
 ): string[] {
-  const words = text.split(/\s+/);
-  const lines: string[] = [];
-  let currentLine = "";
+  const resultLines: string[] = [];
+  const inputLines = text.split(/\r?\n/);
 
-  for (const word of words) {
-    const testLine = currentLine ? `${currentLine} ${word}` : word;
-    const width = font.widthOfTextAtSize(testLine, fontSize);
-    if (width > maxWidth && currentLine) {
-      lines.push(currentLine);
-      currentLine = word;
-    } else {
-      currentLine = testLine;
+  for (const inputLine of inputLines) {
+    if (inputLine.trim() === "") {
+      resultLines.push("");
+      continue;
+    }
+
+    const words = inputLine.split(" ");
+    let currentLine = "";
+
+    for (const word of words) {
+      if (word === "") continue;
+
+      let tempWord = word;
+      while (tempWord.length > 0) {
+        const testLine = currentLine ? `${currentLine} ${tempWord}` : tempWord;
+        const width = font.widthOfTextAtSize(testLine, fontSize);
+
+        if (width <= maxWidth) {
+          currentLine = testLine;
+          tempWord = "";
+        } else {
+          if (currentLine) {
+            resultLines.push(currentLine);
+            currentLine = "";
+          } else {
+            // Forced break for word longer than maxWidth
+            let breakIndex = tempWord.length - 1;
+            while (breakIndex > 0 && font.widthOfTextAtSize(tempWord.substring(0, breakIndex), fontSize) > maxWidth) {
+              breakIndex--;
+            }
+            if (breakIndex === 0) breakIndex = 1;
+            resultLines.push(tempWord.substring(0, breakIndex));
+            tempWord = tempWord.substring(breakIndex);
+          }
+        }
+      }
+    }
+    if (currentLine) {
+      resultLines.push(currentLine);
     }
   }
 
-  if (currentLine) {
-    lines.push(currentLine);
-  }
-
-  return lines;
+  return resultLines;
 }
 
 export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
@@ -224,7 +251,7 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
   });
 
   // 1. Background Construction
-  // White background for left side
+  // White background as fallback
   page.drawRectangle({
     x: 0,
     y: 0,
@@ -241,11 +268,10 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
     height: height,
     borderColor: rgb(0, 0, 0),
     borderWidth: 2,
-    color: undefined, // Transparent fill
+    color: undefined,
   });
 
   // Orange background for right side
-  // Width: 356px (approx 5.5/13 of A4 landscape width 842)
   const rightColWidth = 356;
   page.drawRectangle({
     x: width - rightColWidth,
@@ -255,24 +281,70 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
     color: rgb(0.925, 0.427, 0.075), // #ec6d13
   });
 
-  // 2. Assets
+  // --- DRAW USER PHOTO ---
+  if (data.image) {
+    try {
+      const imageBytes = await data.image.arrayBuffer();
+      let pdfImage;
+      if (data.image.type === "image/png") {
+        pdfImage = await doc.embedPng(imageBytes);
+      } else {
+        pdfImage = await doc.embedJpg(imageBytes);
+      }
+
+      // Calculate "cover" effect for the left column area
+      const leftWidth = width - rightColWidth;
+      const leftHeight = height;
+
+      const imgW = pdfImage.width;
+      const imgH = pdfImage.height;
+      const imgRatio = imgW / imgH;
+      const targetRatio = leftWidth / leftHeight;
+
+      let drawW, drawH, drawX, drawY;
+
+      if (imgRatio > targetRatio) {
+        // Image is wider than target area (height will touch)
+        drawH = leftHeight;
+        drawW = leftHeight * imgRatio;
+        drawX = (leftWidth - drawW) / 2;
+        drawY = 0;
+      } else {
+        // Image is taller than target area (width will touch)
+        drawW = leftWidth;
+        drawH = leftWidth / imgRatio;
+        drawX = 0;
+        drawY = (leftHeight - drawH) / 2;
+      }
+
+      page.drawImage(pdfImage, {
+        x: drawX,
+        y: drawY,
+        width: drawW,
+        height: drawH,
+      });
+    } catch (e) {
+      console.error("Failed to embed user image:", e);
+    }
+  }
+
+  // 2. Assets (Layered carefully)
   const ASSET_SCALE = 3;
 
   try {
-    // Logo (Left side)
-    const logoWidth = 140;
-    const logoHeight = 99; // 140 / 1.41 aspect ratio
-    const logoPng = await convertSvgToPng("/postkarte-assets/StuRa Logo_Digitale Postkarte 2025.svg", logoWidth, logoHeight, ASSET_SCALE);
-    const logoImage = await doc.embedPng(logoPng);
-    page.drawImage(logoImage, {
-      x: 20,
-      y: height - 30 - logoHeight,
-      width: logoWidth,
-      height: logoHeight,
+    // --- LAYER 1: PINE BRANCHES (Bottom-most asset layer) ---
+    // Match object-fit: cover and bottom: 0 from CSS
+    const pinePng = await convertSvgToPng("/postkarte-assets/Tannenzweige_Digitale Postkarte 2025.svg", width, height, ASSET_SCALE, true);
+    const pineImage = await doc.embedPng(pinePng);
+    const pineDims = pineImage.scaleToFit(width, height);
+    page.drawImage(pineImage, {
+      x: 0,
+      y: 0,
+      width: width,
+      height: height,
     });
 
-    // Stamp (Full page overlay)
-    // The SVG contains both the stamp and the waves, positioned relative to the full page.
+    // --- LAYER 2: STAMP OVERLAY ---
     const stampPng = await convertSvgToPng("/postkarte-assets/Poststempel_Digitale Postkarte 2025.svg", width, height, ASSET_SCALE);
     const stampImage = await doc.embedPng(stampPng);
     page.drawImage(stampImage, {
@@ -282,16 +354,17 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
       height: height,
     });
 
-    // Pine Branches (Overlay at bottom)
-    // Full width/height to ensure correct positioning if the SVG is designed that way
-    // Enable removeWhiteBackground to fix transparency on orange background
-    const pinePng = await convertSvgToPng("/postkarte-assets/Tannenzweige_Digitale Postkarte 2025.svg", width, height, ASSET_SCALE, true);
-    const pineImage = await doc.embedPng(pinePng);
-    page.drawImage(pineImage, {
-      x: 0,
-      y: 0,
-      width: width,
-      height: height,
+    // --- LAYER 3: STURA LOGO (Top-most asset layer) ---
+    const logoWidth = 140;
+    // viewBox is 403x117 -> ratio 3.444
+    const logoHeight = logoWidth * (117 / 403);
+    const logoPng = await convertSvgToPng("/postkarte-assets/StuRa Logo_Digitale Postkarte 2025.svg", logoWidth, logoHeight, ASSET_SCALE);
+    const logoImage = await doc.embedPng(logoPng);
+    page.drawImage(logoImage, {
+      x: 20,
+      y: height - 30 - logoHeight,
+      width: logoWidth,
+      height: logoHeight,
     });
 
   } catch (e) {
@@ -300,7 +373,7 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
 
   // 3. Text Content (Left Side)
   const leftPadding = 20;
-  const topPadding = 180; // Below Logo (Increased from 130)
+  const topPadding = 120; // Below Logo (Adjusted to match preview spacing)
   // Reduce content width to make text box narrower (approx 60% of available space)
   const availableWidth = width - rightColWidth - leftPadding - 40;
   const contentWidth = availableWidth * 0.72;
@@ -349,8 +422,8 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
   const footerY = 200; // Moved up from 160 to avoid pine branches
 
   // Signature Area (Bottom Left, above Pine)
-  const line1Y = 210;
-  const line2Y = 194;
+  const line1Y = 85;
+  const line2Y = 69;
   const footerFontSize = 12;
 
   // Line 1: Location (Uni, Land) or Freemover
@@ -370,7 +443,7 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
       y: line1Y,
       size: footerFontSize,
       font: sansFont,
-      color: rgb(0.4, 0.4, 0.4),
+      color: rgb(1, 1, 1),
     });
 
     const w2 = sansFont.widthOfTextAtSize(line2Text, footerFontSize);
@@ -379,7 +452,7 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
       y: line2Y,
       size: footerFontSize,
       font: sansFont,
-      color: rgb(0.4, 0.4, 0.4),
+      color: rgb(1, 1, 1),
     });
   } else if (locationText || line2Text) {
     // Only one of them present -> center vertically between line1Y and line2Y
@@ -391,7 +464,7 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
       y: midY,
       size: footerFontSize,
       font: sansFont,
-      color: rgb(0.4, 0.4, 0.4),
+      color: rgb(1, 1, 1),
     });
   }
 

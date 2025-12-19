@@ -183,3 +183,9 @@
   color: #b91c1c;
   border-color: rgba(248, 113, 113, 0.35);
 }
+
+.metaValue {
+  word-break: break-all;
+  white-space: pre-wrap;
+  color: #0f172a;
+}

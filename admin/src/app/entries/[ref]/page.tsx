@@ -220,7 +220,7 @@ export default function EntryDetailPage() {
                   <strong>Zeitraum:</strong> {entry.fields.term ?? "—"}
                 </li>
                 <li>
-                  <strong>Kurztext:</strong> {entry.fields.message ?? "—"}
+                  <strong>Kurztext:</strong> <span className={styles.metaValue}>{entry.fields.message ?? "—"}</span>
                 </li>
                 <li>
                   <strong>Einwilligung:</strong> {entry.consent ? "Ja" : "Nein"}
