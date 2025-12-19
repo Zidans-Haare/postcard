@@ -95,6 +95,7 @@ export default function Page() {
   const [message, setMessage] = useState("");
   const [agree, setAgree] = useState(false);
   const [raffle, setRaffle] = useState(false);
+  const [isFreemover, setIsFreemover] = useState(false);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfGenerating, setPdfGenerating] = useState(false);
@@ -123,7 +124,8 @@ export default function Page() {
       setStatus({ type: "error", message: "Bitte zuerst den Namen ausfüllen." });
       return;
     }
-    if (!country || !university) {
+    // Validation: if not a Freemover, both country and university must be selected.
+    if (!isFreemover && (!country || !university)) {
       setStatus({ type: "error", message: "Bitte Land und Universität auswählen." });
       return;
     }
@@ -183,9 +185,13 @@ export default function Page() {
       // Meta data
       // Meta data - append individually for backend validation
       formData.append("fullName", fullName);
-      formData.append("email", email);
+      const fullEmail = email.includes("@") ? email : `${email}@stud.htw-dresden.de`;
+      formData.append("email", fullEmail.toLowerCase());
 
-      const locationString = university ? `${university}, ${country}` : country;
+      const locationParts = [];
+      if (university?.trim()) locationParts.push(university.trim());
+      if (country?.trim()) locationParts.push(country.trim());
+      const locationString = locationParts.join(", ");
       if (locationString) formData.append("location", locationString);
 
       if (faculty) formData.append("faculty", faculty);
@@ -405,8 +411,13 @@ export default function Page() {
   }, [pdfUrl]);
 
   const charCount = message.length;
-  const emailValid = EMAIL_REGEX.test(email.trim());
-  const locationString = university ? `${university}, ${country}` : country;
+  // Now only checks if prefix is non-empty since we append @stud.htw-dresden.de
+  const emailValid = email.trim().length > 0;
+
+  const locationString = isFreemover
+    ? "Freemover"
+    : (university ? `${university}, ${country}` : country);
+
   const trimmedMessage = message.trim();
   const trimmedName = fullName.trim();
 
@@ -458,7 +469,8 @@ export default function Page() {
   const canGenerate =
     fullName.trim().length > 0 &&
     emailValid &&
-    agree;
+    agree &&
+    (isFreemover || (country && university));
 
   const formValid =
     canGenerate &&
@@ -505,15 +517,16 @@ export default function Page() {
     setImages((prev) => prev.filter((image) => image.id !== id));
   };
 
-  const buildPdfPayload = (): PostcardFormData => {
+  const buildPdfPayload = (): PostcardFormData & { isFreemover?: boolean } => {
     return {
       fullName,
       email,
       faculty,
-      location: university ? `${university}, ${country}` : country, // Combine for backend compatibility
+      location: locationString,
       country, // Pass country separately for stamp logic
       term,
       message,
+      isFreemover,
     };
   };
 
@@ -743,54 +756,76 @@ export default function Page() {
                       />
                     </div>
 
-                    {/* Country Selection */}
-                    <div className={styles.fieldGroup}>
-                      <label htmlFor="country" className={styles.label}>
-                        Land <span className={styles.required}>*</span>
-                      </label>
-                      <select
-                        id="country"
-                        className={styles.select}
-                        value={country}
+                    <div className={styles.checkboxRow} style={{ marginBottom: "1.5rem" }}>
+                      <input
+                        type="checkbox"
+                        id="isFreemover"
+                        checked={isFreemover}
                         onChange={(e) => {
-                          setCountry(e.target.value);
-                          setUniversity(""); // Reset university when country changes
+                          setIsFreemover(e.target.checked);
+                          if (e.target.checked) {
+                            setCountry("");
+                            setUniversity("");
+                          }
                         }}
-                        required
-                      >
-                        <option value="">Bitte wählen...</option>
-                        {Object.keys(COUNTRIES).sort().map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                      </select>
+                      />
+                      <label htmlFor="isFreemover" style={{ fontSize: "1rem", fontWeight: "600", color: "var(--htw-orange)" }}>
+                        Ich bin Freemover (keine Partner-Uni)
+                      </label>
                     </div>
 
-                    {/* University Selection (dependent on country) */}
-                    <div className={styles.fieldGroup}>
-                      <label htmlFor="university" className={styles.label}>
-                        Universität / Hochschule <span className={styles.required}>*</span>
-                      </label>
-                      <select
-                        id="university"
-                        className={styles.select}
-                        value={university}
-                        onChange={(e) => setUniversity(e.target.value)}
-                        disabled={!country}
-                        required
-                      >
-                        <option value="">
-                          {country ? "Bitte wählen..." : "Zuerst Land auswählen"}
-                        </option>
-                        {country &&
-                          COUNTRIES[country]?.map((uni) => (
-                            <option key={uni} value={uni}>
-                              {uni}
+                    {!isFreemover && (
+                      <>
+                        {/* Country Selection */}
+                        <div className={styles.fieldGroup}>
+                          <label htmlFor="country" className={styles.label}>
+                            Land <span className={styles.required}>*</span>
+                          </label>
+                          <select
+                            id="country"
+                            className={styles.select}
+                            value={country}
+                            onChange={(e) => {
+                              setCountry(e.target.value);
+                              setUniversity(""); // Reset university when country changes
+                            }}
+                            required={!isFreemover}
+                          >
+                            <option value="">Bitte wählen...</option>
+                            {Object.keys(COUNTRIES).sort().map((c) => (
+                              <option key={c} value={c}>
+                                {c}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* University Selection (dependent on country) */}
+                        <div className={styles.fieldGroup}>
+                          <label htmlFor="university" className={styles.label}>
+                            Universität / Hochschule <span className={styles.required}>*</span>
+                          </label>
+                          <select
+                            id="university"
+                            className={styles.select}
+                            value={university}
+                            onChange={(e) => setUniversity(e.target.value)}
+                            disabled={!country}
+                            required={!isFreemover}
+                          >
+                            <option value="">
+                              {country ? "Bitte wählen..." : "Zuerst Land auswählen"}
                             </option>
-                          ))}
-                      </select>
-                    </div>
+                            {country &&
+                              COUNTRIES[country]?.map((uni) => (
+                                <option key={uni} value={uni}>
+                                  {uni}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                      </>
+                    )}
                     <div className={styles.fieldGroup}>
                       <div className={styles.dateInputs}>
                         <div>
@@ -870,23 +905,28 @@ export default function Page() {
 
                     <div className={styles.fieldGroup}>
                       <label htmlFor="email" className={styles.label}>
-                        Deine E-Mail-Adresse (für Status-Updates)
+                        Deine Studierenden-E-Mail (vorname.nachname)
                       </label>
-                      <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        placeholder="name@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        onBlur={() => setEmailTouched(true)}
-                        className={styles.input}
-                        style={emailTouched && !emailValid ? { borderColor: "#EF4444" } : {}}
-                        required
-                      />
-                      {emailTouched && !emailValid && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <input
+                          type="text"
+                          id="email"
+                          name="email"
+                          placeholder="vorname.nachname"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value.split("@")[0])}
+                          onBlur={() => setEmailTouched(true)}
+                          className={styles.input}
+                          style={emailTouched && !email.trim() ? { borderColor: "#EF4444" } : { flex: 1 }}
+                          required
+                        />
+                        <span style={{ color: "#475569", fontWeight: "600", fontSize: "0.95rem", whiteSpace: "nowrap" }}>
+                          @stud.htw-dresden.de
+                        </span>
+                      </div>
+                      {emailTouched && !email.trim() && (
                         <p style={{ color: "#EF4444", fontSize: "0.85rem", marginTop: "0.25rem" }}>
-                          Bitte gib eine gültige E-Mail-Adresse ein.
+                          Bitte gib dein E-Mail-Kürzel ein.
                         </p>
                       )}
                     </div>
@@ -948,13 +988,18 @@ export default function Page() {
                               </div>
                               {/* Signature / Meta Info */}
                               <div className={styles.postcardSignature}>
-                                <div className={styles.postcardMeta}>
-                                  {locationString && <span>{locationString}</span>}
-                                  {locationString && (faculty || termDisplay) && <span> • </span>}
-                                  {faculty && <span>{faculty}</span>}
-                                  {faculty && termDisplay && <span> • </span>}
-                                  {termDisplay && <span>{termDisplay}</span>}
-                                </div>
+                                {locationString && (
+                                  <div className={styles.postcardMeta}>
+                                    <span>{locationString}</span>
+                                  </div>
+                                )}
+                                {(faculty || termDisplay) && (
+                                  <div className={styles.postcardMeta}>
+                                    {faculty && <span>{faculty}</span>}
+                                    {faculty && termDisplay && <span> • </span>}
+                                    {termDisplay && <span>{termDisplay}</span>}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>

@@ -26,7 +26,7 @@ export const uploadFieldsSchema = z.object({
       required_error: "Fakultät auswählen.",
     })
     .optional(),
-  location: z.string().max(200, "Ort/Uni ist zu lang.").optional(),
+  location: z.string().max(200, "Ort/Uni ist zu lang.").optional().nullable(),
   term: z.string().max(100, "Zeitraum ist zu lang.").optional(),
   message: z
     .string()

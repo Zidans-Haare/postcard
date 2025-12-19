@@ -9,6 +9,7 @@ export interface PostcardFormData {
   country?: string;
   term?: string;
   message?: string;
+  isFreemover?: boolean;
 }
 
 const A4_LANDSCAPE: [number, number] = [842, 595];
@@ -347,21 +348,47 @@ export async function createPostcardPdf(data: PostcardFormData): Promise<File> {
   // Pine branches take up bottom ~150px?
   const footerY = 200; // Moved up from 160 to avoid pine branches
 
-  // Construct footer string: Location • Faculty • Term
-  let footerParts: string[] = [];
-  if (data.location?.trim()) footerParts.push(data.location.trim());
-  if (data.faculty) footerParts.push(data.faculty);
-  if (data.term) footerParts.push(data.term);
+  // Signature Area (Bottom Left, above Pine)
+  const line1Y = 210;
+  const line2Y = 194;
+  const footerFontSize = 12;
 
-  const footerText = footerParts.join(" • ");
+  // Line 1: Location (Uni, Land) or Freemover
+  const locationText = data.isFreemover ? "Freemover" : (data.location?.trim() || "");
 
-  if (footerText) {
-    const footerFontSize = 12;
-    const footerWidth = sansFont.widthOfTextAtSize(footerText, footerFontSize);
+  // Line 2: Faculty • Term
+  let line2Parts: string[] = [];
+  if (data.faculty) line2Parts.push(data.faculty);
+  if (data.term) line2Parts.push(data.term);
+  const line2Text = line2Parts.join(" • ");
 
-    page.drawText(footerText, {
-      x: centerX - (footerWidth / 2),
-      y: footerY,
+  if (locationText && line2Text) {
+    // Both lines present
+    const w1 = sansFont.widthOfTextAtSize(locationText, footerFontSize);
+    page.drawText(locationText, {
+      x: centerX - (w1 / 2),
+      y: line1Y,
+      size: footerFontSize,
+      font: sansFont,
+      color: rgb(0.4, 0.4, 0.4),
+    });
+
+    const w2 = sansFont.widthOfTextAtSize(line2Text, footerFontSize);
+    page.drawText(line2Text, {
+      x: centerX - (w2 / 2),
+      y: line2Y,
+      size: footerFontSize,
+      font: sansFont,
+      color: rgb(0.4, 0.4, 0.4),
+    });
+  } else if (locationText || line2Text) {
+    // Only one of them present -> center vertically between line1Y and line2Y
+    const text = locationText || line2Text;
+    const w = sansFont.widthOfTextAtSize(text, footerFontSize);
+    const midY = (line1Y + line2Y) / 2;
+    page.drawText(text, {
+      x: centerX - (w / 2),
+      y: midY,
       size: footerFontSize,
       font: sansFont,
       color: rgb(0.4, 0.4, 0.4),
